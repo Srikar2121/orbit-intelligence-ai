@@ -105,8 +105,8 @@ function ChatPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col">
-      <Blobs />
+    <div className={`relative min-h-screen flex flex-col mode-${mode} transition-colors duration-500`}>
+      <Blobs variant={mode} />
 
       {/* Top bar */}
       <header className="sticky top-0 z-40 px-3 sm:px-4 pt-3">
