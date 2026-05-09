@@ -157,7 +157,7 @@ function ChatPage() {
       <div className="flex-1 grid md:grid-cols-[280px_1fr] gap-3 p-3 sm:p-4 min-h-0">
         {/* Sidebar */}
         <aside className={`glass rounded-2xl p-3 ${sidebar ? 'block' : 'hidden'} md:block`}>
-          <button onClick={() => setMessages([{ id: "w", role: "ai", text: "Hey, I'm Mindmesh AI. What's on your mind today?" }])}
+          <button onClick={() => resetChat(mode)}
             className="w-full rounded-xl py-2.5 text-sm font-semibold text-white flex items-center gap-2 justify-center neon-glow"
             style={{ background: 'var(--gradient-neon)' }}>
             <Plus className="h-4 w-4" /> New chat
