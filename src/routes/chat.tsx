@@ -56,8 +56,9 @@ function ChatPage() {
     "Welcome chat", "Resume rewrite", "Tokyo trip", "Startup names", "Late night thoughts"
   ]);
   const [active, setActive] = useState(0);
+  const [mode, setMode] = useState<Mode>("genz");
   const [messages, setMessages] = useState<Msg[]>([
-    { id: "w", role: "ai", text: "Hey, I'm Mindmesh AI. What's on your mind today?" },
+    { id: "w", role: "ai", text: WELCOME["genz"] },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -68,16 +69,25 @@ function ChatPage() {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing]);
 
+  const resetChat = (m: Mode) => {
+    setMessages([{ id: "w" + Date.now(), role: "ai", text: WELCOME[m] }]);
+  };
+
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setMessages((prev) => [...prev, { id: "sys" + Date.now(), role: "ai", text: `⚡ Switched to ${MODES.find(x => x.id === m)?.label} mode — ${MODES.find(x => x.id === m)?.sub}.` }]);
+  };
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setMessages([{ id: "w" + Date.now(), role: "ai", text: "Fresh start. What's on your mind?" }]);
+        resetChat(mode);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [mode]);
 
   const send = () => {
     const text = input.trim();
@@ -87,7 +97,8 @@ function ChatPage() {
     setInput("");
     setTyping(true);
     setTimeout(() => {
-      const reply = SAMPLE_REPLIES[Math.floor(Math.random() * SAMPLE_REPLIES.length)];
+      const pool = REPLIES[mode];
+      const reply = pool[Math.floor(Math.random() * pool.length)];
       setMessages((m) => [...m, { id: "a" + Date.now(), role: "ai", text: reply }]);
       setTyping(false);
     }, 1100);
