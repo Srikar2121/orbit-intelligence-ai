@@ -128,11 +128,28 @@ function ChatPage() {
               </div>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-            <kbd className="px-2 py-1 rounded-md bg-white/5 border border-white/10">⌘ K</kbd>
-            <span>new</span>
-            <kbd className="px-2 py-1 rounded-md bg-white/5 border border-white/10">↵</kbd>
-            <span>send</span>
+          <div className="hidden md:flex items-center gap-1 glass rounded-full p-1">
+            {MODES.map((m) => {
+              const Icon = m.icon;
+              const active = mode === m.id;
+              return (
+                <button key={m.id} onClick={() => switchMode(m.id)}
+                  title={m.sub}
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${active ? 'text-white neon-glow' : 'text-muted-foreground hover:text-white'}`}
+                  style={active ? { background: 'var(--gradient-neon)' } : undefined}>
+                  <Icon className="h-3.5 w-3.5" />
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="md:hidden">
+            <select value={mode} onChange={(e) => switchMode(e.target.value as Mode)}
+              className="glass rounded-full px-3 py-1.5 text-xs font-semibold bg-transparent outline-none">
+              {MODES.map((m) => (
+                <option key={m.id} value={m.id} className="bg-background">{m.emoji} {m.label}</option>
+              ))}
+            </select>
           </div>
         </div>
       </header>
