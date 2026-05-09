@@ -45,12 +45,11 @@ export const Route = createFileRoute("/chat")({
 
 type Msg = { id: string; role: "user" | "ai"; text: string };
 
-const SAMPLE_REPLIES = [
-  "Ooh love that. Tell me more — what's the vibe you're going for?",
-  "Got it. Here's a quick take: think of it as three layers — clarity, momentum, and follow-through.",
-  "Locked in. Want me to draft something or brainstorm options first?",
-  "That's a fire idea. Let's break it into 3 simple steps you can ship today.",
-];
+const WELCOME: Record<Mode, string> = {
+  default: "Hi. I'm Mindmesh AI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
+  genz: "yo bestie 💜 mindmesh here, fully unhinged & ready to spill. what's the tea today?",
+  codey: "Mindmesh online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
+};
 
 function ChatPage() {
   const [history] = useState([
