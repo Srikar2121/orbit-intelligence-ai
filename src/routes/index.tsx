@@ -1,26 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Blobs } from "@/components/Blobs";
+import { Navbar } from "@/components/Navbar";
+import { Hero } from "@/components/Hero";
+import { Features } from "@/components/Features";
+import { ChatPreview } from "@/components/ChatPreview";
+import { Testimonials } from "@/components/Testimonials";
+import { Footer } from "@/components/Footer";
+import { Onboarding } from "@/components/Onboarding";
 
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Mindmesh AI — Your thoughts. Connected." },
+      { name: "description", content: "Mindmesh AI is a futuristic AI companion that learns how you think. Created by Srikar." },
+      { property: "og:title", content: "Mindmesh AI — Your thoughts. Connected." },
+      { property: "og:description", content: "A premium Gen-Z AI chat experience. Created by Srikar." },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
+function Index() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="relative min-h-screen">
+      <Blobs />
+      <Navbar />
+      <main>
+        <Hero />
+        <Features />
+        <ChatPreview />
+        <Testimonials />
+      </main>
+      <Footer />
+      <Onboarding />
     </div>
   );
-}
-
-function Index() {
-  return <PlaceholderIndex />;
 }
