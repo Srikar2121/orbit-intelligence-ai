@@ -163,3 +163,49 @@
     animation: shimmer 2s infinite;
   }
 }
+
+/* === Per-mode themes === */
+.mode-default {
+  --gradient-neon: linear-gradient(135deg, #7C4DFF, #00E5FF 50%, #A78BFA);
+  --gradient-text: linear-gradient(135deg, #c9a8ff, #00e5ff 60%, #a78bfa);
+  --shadow-neon: 0 10px 40px -10px rgba(124, 77, 255, 0.55);
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+}
+.mode-genz {
+  --gradient-neon: linear-gradient(135deg, #FF4D9D, #FFD166 55%, #7C4DFF);
+  --gradient-text: linear-gradient(135deg, #ff7ab8, #ffd166 50%, #c9a8ff);
+  --shadow-neon: 0 10px 40px -10px rgba(255, 77, 157, 0.6);
+  font-family: 'Sora', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+.mode-genz .glass { background: rgba(255, 77, 157, 0.06); }
+.mode-codey {
+  --gradient-neon: linear-gradient(135deg, #00E5FF, #22C55E 55%, #0EA5E9);
+  --gradient-text: linear-gradient(135deg, #5eead4, #22c55e 50%, #38bdf8);
+  --shadow-neon: 0 10px 40px -10px rgba(34, 197, 94, 0.55);
+  font-family: 'JetBrains Mono', ui-monospace, 'Courier New', monospace;
+}
+.mode-codey .glass {
+  background: rgba(0, 229, 255, 0.04);
+  border-color: rgba(34, 197, 94, 0.25);
+}
+.mode-codey input, .mode-codey kbd { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+.mode-codey::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: -5;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 2px,
+    rgba(34, 197, 94, 0.05) 2px, rgba(34, 197, 94, 0.05) 3px
+  );
+}
+.mode-genz::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: -5;
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(255, 209, 102, 0.18) 0, transparent 2px),
+    radial-gradient(circle at 75% 60%, rgba(255, 77, 157, 0.2) 0, transparent 2px),
+    radial-gradient(circle at 40% 85%, rgba(124, 77, 255, 0.2) 0, transparent 2px),
+    radial-gradient(circle at 90% 15%, rgba(255, 209, 102, 0.18) 0, transparent 2px);
+  background-size: 220px 220px;
+}
