@@ -1,8 +1,37 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Plus, ArrowLeft, Menu } from "lucide-react";
+import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2 } from "lucide-react";
 import { Blobs } from "@/components/Blobs";
+
+type Mode = "default" | "genz" | "codey";
+
+const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[] = [
+  { id: "default", label: "Default", sub: "for the nerds", icon: Brain, emoji: "🧠" },
+  { id: "genz", label: "Gen-Z", sub: "for humans", icon: Zap, emoji: "✨" },
+  { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
+];
+
+const REPLIES: Record<Mode, string[]> = {
+  default: [
+    "Interesting question. Let me break this down into a few key components for clarity.",
+    "Based on the available context, here's a structured approach: first, define the problem; second, explore constraints; third, evaluate trade-offs.",
+    "A reasonable framework here would be to consider both the technical and human factors before deciding.",
+    "Good prompt. The optimal answer depends on your priorities — do you want speed, accuracy, or coverage?",
+  ],
+  genz: [
+    "bestie that's actually iconic 💅 lemme cook real quick…",
+    "no bc this idea? unmatched. lowkey obsessed 🔥 here's the move →",
+    "okay slay 😭 we're gonna make this go viral — hear me out",
+    "fr fr that's such a vibe ✨ lock in, i got u",
+  ],
+  codey: [
+    "Scaling thesis: compress the loop, 10x the throughput. Ship today, iterate at the edge. 🚀",
+    "First principles: strip it to atoms, rebuild leaner. Mars-tier ambition, Day-1 customer obsession.",
+    "Optimize for velocity. Burn the org chart. Move fast, write the press release first, reverse-engineer the product.",
+    "Bandwidth allocated. Treat this like a rocket — every gram matters. Cut, simplify, then accelerate.",
+  ],
+};
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -16,20 +45,20 @@ export const Route = createFileRoute("/chat")({
 
 type Msg = { id: string; role: "user" | "ai"; text: string };
 
-const SAMPLE_REPLIES = [
-  "Ooh love that. Tell me more — what's the vibe you're going for?",
-  "Got it. Here's a quick take: think of it as three layers — clarity, momentum, and follow-through.",
-  "Locked in. Want me to draft something or brainstorm options first?",
-  "That's a fire idea. Let's break it into 3 simple steps you can ship today.",
-];
+const WELCOME: Record<Mode, string> = {
+  default: "Hi. I'm Mindmesh AI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
+  genz: "yo bestie 💜 mindmesh here, fully unhinged & ready to spill. what's the tea today?",
+  codey: "Mindmesh online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
+};
 
 function ChatPage() {
   const [history] = useState([
     "Welcome chat", "Resume rewrite", "Tokyo trip", "Startup names", "Late night thoughts"
   ]);
   const [active, setActive] = useState(0);
+  const [mode, setMode] = useState<Mode>("genz");
   const [messages, setMessages] = useState<Msg[]>([
-    { id: "w", role: "ai", text: "Hey, I'm Mindmesh AI. What's on your mind today?" },
+    { id: "w", role: "ai", text: WELCOME["genz"] },
   ]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -40,16 +69,25 @@ function ChatPage() {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing]);
 
+  const resetChat = (m: Mode) => {
+    setMessages([{ id: "w" + Date.now(), role: "ai", text: WELCOME[m] }]);
+  };
+
+  const switchMode = (m: Mode) => {
+    setMode(m);
+    setMessages((prev) => [...prev, { id: "sys" + Date.now(), role: "ai", text: `⚡ Switched to ${MODES.find(x => x.id === m)?.label} mode — ${MODES.find(x => x.id === m)?.sub}.` }]);
+  };
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        setMessages([{ id: "w" + Date.now(), role: "ai", text: "Fresh start. What's on your mind?" }]);
+        resetChat(mode);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [mode]);
 
   const send = () => {
     const text = input.trim();
@@ -59,7 +97,8 @@ function ChatPage() {
     setInput("");
     setTyping(true);
     setTimeout(() => {
-      const reply = SAMPLE_REPLIES[Math.floor(Math.random() * SAMPLE_REPLIES.length)];
+      const pool = REPLIES[mode];
+      const reply = pool[Math.floor(Math.random() * pool.length)];
       setMessages((m) => [...m, { id: "a" + Date.now(), role: "ai", text: reply }]);
       setTyping(false);
     }, 1100);
@@ -89,11 +128,28 @@ function ChatPage() {
               </div>
             </div>
           </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-muted-foreground">
-            <kbd className="px-2 py-1 rounded-md bg-white/5 border border-white/10">⌘ K</kbd>
-            <span>new</span>
-            <kbd className="px-2 py-1 rounded-md bg-white/5 border border-white/10">↵</kbd>
-            <span>send</span>
+          <div className="hidden md:flex items-center gap-1 glass rounded-full p-1">
+            {MODES.map((m) => {
+              const Icon = m.icon;
+              const active = mode === m.id;
+              return (
+                <button key={m.id} onClick={() => switchMode(m.id)}
+                  title={m.sub}
+                  className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${active ? 'text-white neon-glow' : 'text-muted-foreground hover:text-white'}`}
+                  style={active ? { background: 'var(--gradient-neon)' } : undefined}>
+                  <Icon className="h-3.5 w-3.5" />
+                  {m.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="md:hidden">
+            <select value={mode} onChange={(e) => switchMode(e.target.value as Mode)}
+              className="glass rounded-full px-3 py-1.5 text-xs font-semibold bg-transparent outline-none">
+              {MODES.map((m) => (
+                <option key={m.id} value={m.id} className="bg-background">{m.emoji} {m.label}</option>
+              ))}
+            </select>
           </div>
         </div>
       </header>
@@ -101,7 +157,7 @@ function ChatPage() {
       <div className="flex-1 grid md:grid-cols-[280px_1fr] gap-3 p-3 sm:p-4 min-h-0">
         {/* Sidebar */}
         <aside className={`glass rounded-2xl p-3 ${sidebar ? 'block' : 'hidden'} md:block`}>
-          <button onClick={() => setMessages([{ id: "w", role: "ai", text: "Hey, I'm Mindmesh AI. What's on your mind today?" }])}
+          <button onClick={() => resetChat(mode)}
             className="w-full rounded-xl py-2.5 text-sm font-semibold text-white flex items-center gap-2 justify-center neon-glow"
             style={{ background: 'var(--gradient-neon)' }}>
             <Plus className="h-4 w-4" /> New chat
