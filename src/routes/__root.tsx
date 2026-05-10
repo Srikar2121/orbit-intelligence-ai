@@ -72,10 +72,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "BrightCore-AI" },
-      { name: "description", content: "BrightCore-AI — Your thoughts. Connected. Created by Srikar." },
+      { title: "OrbitIntelligenceAI" },
+      { name: "description", content: "OrbitIntelligenceAI — Your thoughts. Connected. Created by Srikar." },
       { name: "author", content: "Srikar" },
-      { property: "og:title", content: "BrightCore-AI" },
+      { property: "og:title", content: "OrbitIntelligenceAI" },
       { property: "og:description", content: "A premium Gen-Z AI chat experience. Created by Srikar." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

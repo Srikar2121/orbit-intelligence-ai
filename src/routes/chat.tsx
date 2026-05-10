@@ -36,8 +36,8 @@ const REPLIES: Record<Mode, string[]> = {
 export const Route = createFileRoute("/chat")({
   head: () => ({
     meta: [
-      { title: "Chat · BrightCore-AI" },
-      { name: "description", content: "Chat with BrightCore-AI — created by Srikar." },
+      { title: "Chat · OrbitIntelligenceAI" },
+      { name: "description", content: "Chat with OrbitIntelligenceAI — created by Srikar." },
     ],
   }),
   component: ChatPage,
@@ -46,9 +46,9 @@ export const Route = createFileRoute("/chat")({
 type Msg = { id: string; role: "user" | "ai"; text: string };
 
 const WELCOME: Record<Mode, string> = {
-  default: "Hi. I'm BrightCore-AI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
-  genz: "hey 💜 brightcore here in Gen-Z mode — casual but actually useful. what are we figuring out?",
-  codey: "BrightCore online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
+  default: "Hi. I'm OrbitIntelligenceAI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
+  genz: "hey 💜 orbit here in Gen-Z mode — casual but actually useful. what are we figuring out?",
+  codey: "OrbitIntelligence online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
 };
 
 function ChatPage() {
@@ -123,7 +123,7 @@ function ChatPage() {
                 <Sparkles className="h-4 w-4 text-white" />
               </div>
               <div className="leading-tight">
-                <div className="text-sm font-bold gradient-text">BrightCore-AI</div>
+                <div className="text-sm font-bold gradient-text">OrbitIntelligenceAI</div>
                 <div className="text-[10px] text-muted-foreground">by Srikar · ⌘K new chat</div>
               </div>
             </div>
@@ -219,7 +219,7 @@ function ChatPage() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder="Message BrightCore… (Enter to send · ⌘K new)"
+                placeholder="Message OrbitIntelligence… (Enter to send · ⌘K new)"
                 className="flex-1 bg-transparent px-3 py-2.5 outline-none text-sm placeholder:text-muted-foreground"
               />
               <button onClick={send} className="h-10 w-10 rounded-xl grid place-items-center text-white hover:scale-105 transition neon-glow"
@@ -228,7 +228,7 @@ function ChatPage() {
               </button>
             </div>
             <div className="text-center text-[10px] text-muted-foreground mt-2">
-              BrightCore can make mistakes. Double check important info. Created by <span className="gradient-text font-semibold">Srikar</span>.
+              OrbitIntelligence can make mistakes. Double check important info. Created by <span className="gradient-text font-semibold">Srikar</span>.
             </div>
           </div>
         </section>

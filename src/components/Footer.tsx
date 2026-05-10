@@ -10,7 +10,7 @@ export function Footer() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div>
-              <div className="font-display font-bold gradient-text text-lg">BrightCore-AI</div>
+              <div className="font-display font-bold gradient-text text-lg">OrbitIntelligenceAI</div>
               <div className="text-xs text-muted-foreground">Your thoughts. Connected.</div>
             </div>
           </div>
@@ -23,7 +23,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
-          <div>© {new Date().getFullYear()} BrightCore-AI · All vibes reserved.</div>
+          <div>© {new Date().getFullYear()} OrbitIntelligenceAI · All vibes reserved.</div>
           <div>Created by <span className="gradient-text font-semibold">Srikar</span></div>
         </div>
       </div>
