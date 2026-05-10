@@ -12,9 +12,9 @@ import { Onboarding } from "@/components/Onboarding";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "BrightCore-AI — Your thoughts. Connected." },
-      { name: "description", content: "BrightCore-AI is a futuristic AI companion that learns how you think. Created by Srikar." },
-      { property: "og:title", content: "BrightCore-AI — Your thoughts. Connected." },
+      { title: "OrbitIntelligenceAI — Your thoughts. Connected." },
+      { name: "description", content: "OrbitIntelligenceAI is a futuristic AI companion that learns how you think. Created by Srikar." },
+      { property: "og:title", content: "OrbitIntelligenceAI — Your thoughts. Connected." },
       { property: "og:description", content: "A premium Gen-Z AI chat experience. Created by Srikar." },
     ],
   }),

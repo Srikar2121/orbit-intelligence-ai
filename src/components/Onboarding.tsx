@@ -6,14 +6,14 @@ export function Onboarding() {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (!localStorage.getItem('brightcore_onboarded')) {
+    if (!localStorage.getItem('orbit_onboarded')) {
       const t = setTimeout(() => setOpen(true), 800);
       return () => clearTimeout(t);
     }
   }, []);
 
   const close = () => {
-    localStorage.setItem('brightcore_onboarded', '1');
+    localStorage.setItem('orbit_onboarded', '1');
     setOpen(false);
   };
 
@@ -28,9 +28,9 @@ export function Onboarding() {
             <div className="mx-auto h-16 w-16 rounded-2xl grid place-items-center neon-glow animate-pulse-glow" style={{ background: 'var(--gradient-neon)' }}>
               <Sparkles className="h-7 w-7 text-white" />
             </div>
-            <h3 className="mt-5 text-2xl font-bold gradient-text">Welcome to BrightCore</h3>
+            <h3 className="mt-5 text-2xl font-bold gradient-text">Welcome to OrbitIntelligence</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              Hey, I'm BrightCore-AI. What's on your mind today? Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-xs">⌘ K</kbd> any time to start a new chat.
+              Hey, I'm OrbitIntelligenceAI. What's on your mind today? Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 text-xs">⌘ K</kbd> any time to start a new chat.
             </p>
             <button onClick={close} className="mt-6 w-full rounded-2xl py-3 font-semibold text-white neon-glow hover:scale-[1.02] transition" style={{ background: 'var(--gradient-neon)' }}>
               Let's go ✨
