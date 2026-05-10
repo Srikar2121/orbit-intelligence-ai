@@ -7,7 +7,7 @@ const features = [
   { icon: Zap, title: "Fast Responses", desc: "Streaming answers in milliseconds. No waiting around." },
   { icon: Sparkles, title: "Personalized Experience", desc: "Adapts tone, depth and vibe based on you." },
   { icon: PenLine, title: "Creative Writing", desc: "From poems to pitch decks — your idea, amplified." },
-  { icon: Rocket, title: "Productivity Assistant", desc: "Plan, summarize and ship. Mindmesh gets things done." },
+  { icon: Rocket, title: "Productivity Assistant", desc: "Plan, summarize and ship. BrightCore gets things done." },
 ];
 
 export function Features() {

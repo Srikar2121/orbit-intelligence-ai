@@ -17,7 +17,7 @@ export function Navbar() {
               <Sparkles className="h-5 w-5 text-white" />
             </div>
             <div className="leading-tight">
-              <div className="font-display text-lg font-bold gradient-text">Mindmesh AI</div>
+              <div className="font-display text-lg font-bold gradient-text">BrightCore-AI</div>
               <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Created by Srikar</div>
             </div>
           </Link>
