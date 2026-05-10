@@ -46,7 +46,7 @@
 :root {
   --radius: 1rem;
 
-  /* Mindmesh dark-by-default palette */
+  /* BrightCore dark-by-default palette */
   --background: oklch(0.18 0.03 270);
   --foreground: oklch(0.97 0.01 270);
   --card: oklch(0.22 0.04 270 / 60%);

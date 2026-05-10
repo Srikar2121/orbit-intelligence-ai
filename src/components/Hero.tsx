@@ -9,12 +9,12 @@ export function Hero() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
           className="inline-flex items-center gap-2 glass rounded-full px-4 py-1.5 text-xs text-muted-foreground mb-8">
           <Sparkles className="h-3.5 w-3.5 text-cyan-accent" />
-          <span>New · Mindmesh v1.0 — Created by Srikar</span>
+          <span>New · BrightCore v1.0 — Created by Srikar</span>
         </motion.div>
 
         <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
           className="font-display text-6xl sm:text-7xl md:text-8xl font-extrabold leading-[0.95] tracking-tight">
-          <span className="gradient-text">Mindmesh AI</span>
+          <span className="gradient-text">BrightCore-AI</span>
         </motion.h1>
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}

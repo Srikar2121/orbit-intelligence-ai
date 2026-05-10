@@ -54,7 +54,7 @@ export function ChatPreview() {
               </div>
               <div className="p-4 border-t border-white/10">
                 <div className="glass rounded-2xl flex items-center gap-2 p-2 gradient-border">
-                  <input disabled placeholder="Message Mindmesh…" className="flex-1 bg-transparent px-3 py-2 outline-none text-sm" />
+                  <input disabled placeholder="Message BrightCore…" className="flex-1 bg-transparent px-3 py-2 outline-none text-sm" />
                   <button className="h-9 w-9 rounded-xl grid place-items-center text-white" style={{ background: 'var(--gradient-neon)' }}>
                     <Send className="h-4 w-4" />
                   </button>
