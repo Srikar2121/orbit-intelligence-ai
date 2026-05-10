@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { Blobs } from "@/components/Blobs";
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
@@ -20,11 +21,14 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+export type Mode = "default" | "genz" | "codey";
+
 function Index() {
+  const [mode, setMode] = useState<Mode>("genz");
   return (
-    <div className="relative min-h-screen">
-      <Blobs />
-      <Navbar />
+    <div className={`relative min-h-screen mode-${mode} transition-colors duration-500`}>
+      <Blobs variant={mode} />
+      <Navbar mode={mode} onModeChange={setMode} />
       <main>
         <Hero />
         <Features />
