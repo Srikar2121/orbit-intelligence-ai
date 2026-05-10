@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 
 const reviews = [
-  { name: "Aria K.", handle: "@ariakthinks", text: "mindmesh literally reads my mind. it's giving best friend energy 💜", color: "#7C4DFF" },
+  { name: "Aria K.", handle: "@ariakthinks", text: "brightcore literally reads my mind. it's giving best friend energy 💜", color: "#7C4DFF" },
   { name: "Devon M.", handle: "@devbuilds", text: "replaced 4 apps with this. the UI alone is unreal.", color: "#00E5FF" },
   { name: "Sana R.", handle: "@sanawrites", text: "I wrote my entire short story in one session. flow state unlocked.", color: "#FF4D9D" },
   { name: "Jules P.", handle: "@julesxo", text: "okay but the typing animation??? obsessed.", color: "#7C4DFF" },
