@@ -20,10 +20,10 @@ const REPLIES: Record<Mode, string[]> = {
     "Good prompt. The optimal answer depends on your priorities — do you want speed, accuracy, or coverage?",
   ],
   genz: [
-    "bestie that's actually iconic 💅 lemme cook real quick…",
-    "no bc this idea? unmatched. lowkey obsessed 🔥 here's the move →",
-    "okay slay 😭 we're gonna make this go viral — hear me out",
-    "fr fr that's such a vibe ✨ lock in, i got u",
+    "ok so here's the play ✨ break it into 3 steps, start with the easiest win, build momentum from there.",
+    "lowkey solid question — short answer: yes, but only if you nail the timing. long answer: depends on your audience + budget.",
+    "got u 💜 try this: pick one core idea, test it for a week, then double down on whatever sticks.",
+    "real talk — the move is to keep it simple. one goal, one metric, one deadline. everything else is noise.",
   ],
   codey: [
     "Scaling thesis: compress the loop, 10x the throughput. Ship today, iterate at the edge. 🚀",
@@ -47,7 +47,7 @@ type Msg = { id: string; role: "user" | "ai"; text: string };
 
 const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm BrightCore-AI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
-  genz: "yo bestie 💜 brightcore here, fully unhinged & ready to spill. what's the tea today?",
+  genz: "hey 💜 brightcore here in Gen-Z mode — casual but actually useful. what are we figuring out?",
   codey: "BrightCore online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
 };
 
