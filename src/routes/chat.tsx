@@ -47,7 +47,7 @@ type Msg = { id: string; role: "user" | "ai"; text: string };
 
 const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm BrightCore-AI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
-  genz: "yo bestie 💜 brightcore here, fully unhinged & ready to spill. what's the tea today?",
+  genz: "hey 💜 brightcore here in Gen-Z mode — casual but actually useful. what are we figuring out?",
   codey: "BrightCore online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
 };
 
