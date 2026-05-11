@@ -225,22 +225,24 @@ function ChatPage() {
                       ? 'rounded-tr-sm text-white'
                       : 'glass rounded-tl-sm'
                   }`} style={m.role === 'user' ? { background: 'var(--gradient-neon)' } : undefined}>
-                    {m.text}
+                    {m.role === 'ai' ? (
+                      m.text ? (
+                        <div className="prose prose-invert prose-sm max-w-none prose-p:my-2 prose-pre:my-2 prose-pre:bg-black/40 prose-code:text-white">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 py-1">
+                          <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" />
+                          <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.15s' }} />
+                          <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.3s' }} />
+                        </div>
+                      )
+                    ) : (
+                      m.text
+                    )}
                   </div>
                 </motion.div>
               ))}
-              {typing && (
-                <motion.div key="typing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex gap-3">
-                  <div className="h-8 w-8 rounded-xl grid place-items-center shrink-0" style={{ background: 'var(--gradient-neon)' }}>
-                    <Sparkles className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="glass rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" />
-                    <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.15s' }} />
-                    <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.3s' }} />
-                  </div>
-                </motion.div>
-              )}
             </AnimatePresence>
           </div>
 
