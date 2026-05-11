@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Blobs } from "@/components/Blobs";
 
 type Mode = "default" | "genz" | "codey";
@@ -11,27 +13,6 @@ const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[
   { id: "genz", label: "Gen-Z", sub: "for humans", icon: Zap, emoji: "✨" },
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
 ];
-
-const REPLIES: Record<Mode, string[]> = {
-  default: [
-    "Interesting question. Let me break this down into a few key components for clarity.",
-    "Based on the available context, here's a structured approach: first, define the problem; second, explore constraints; third, evaluate trade-offs.",
-    "A reasonable framework here would be to consider both the technical and human factors before deciding.",
-    "Good prompt. The optimal answer depends on your priorities — do you want speed, accuracy, or coverage?",
-  ],
-  genz: [
-    "ok so here's the play ✨ break it into 3 steps, start with the easiest win, build momentum from there.",
-    "lowkey solid question — short answer: yes, but only if you nail the timing. long answer: depends on your audience + budget.",
-    "got u 💜 try this: pick one core idea, test it for a week, then double down on whatever sticks.",
-    "real talk — the move is to keep it simple. one goal, one metric, one deadline. everything else is noise.",
-  ],
-  codey: [
-    "Scaling thesis: compress the loop, 10x the throughput. Ship today, iterate at the edge. 🚀",
-    "First principles: strip it to atoms, rebuild leaner. Mars-tier ambition, Day-1 customer obsession.",
-    "Optimize for velocity. Burn the org chart. Move fast, write the press release first, reverse-engineer the product.",
-    "Bandwidth allocated. Treat this like a rocket — every gram matters. Cut, simplify, then accelerate.",
-  ],
-};
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
@@ -89,19 +70,70 @@ function ChatPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [mode]);
 
-  const send = () => {
+  const send = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || typing) return;
     const userMsg: Msg = { id: String(Date.now()), role: "user", text };
-    setMessages((m) => [...m, userMsg]);
+    const aiId = "a" + Date.now();
+    setMessages((m) => [...m, userMsg, { id: aiId, role: "ai", text: "" }]);
     setInput("");
     setTyping(true);
-    setTimeout(() => {
-      const pool = REPLIES[mode];
-      const reply = pool[Math.floor(Math.random() * pool.length)];
-      setMessages((m) => [...m, { id: "a" + Date.now(), role: "ai", text: reply }]);
+
+    try {
+      const history = [...messages, userMsg]
+        .filter((m) => m.id !== "w" && !m.id.startsWith("sys"))
+        .map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text }));
+
+      const resp = await fetch("/api/public/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, mode }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const err = await resp.json().catch(() => ({ error: "Request failed" }));
+        setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: `⚠️ ${err.error || "Something went wrong."}` } : x));
+        setTyping(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acc = "";
+      let done = false;
+
+      while (!done) {
+        const { value, done: d } = await reader.read();
+        if (d) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") { done = true; break; }
+          try {
+            const json = JSON.parse(data);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              acc += delta;
+              setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: acc } : x));
+            }
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: "⚠️ Network error. Try again." } : x));
+    } finally {
       setTyping(false);
-    }, 1100);
+    }
   };
 
   return (
@@ -193,22 +225,24 @@ function ChatPage() {
                       ? 'rounded-tr-sm text-white'
                       : 'glass rounded-tl-sm'
                   }`} style={m.role === 'user' ? { background: 'var(--gradient-neon)' } : undefined}>
-                    {m.text}
+                    {m.role === 'ai' ? (
+                      m.text ? (
+                        <div className="prose prose-invert prose-sm max-w-none prose-p:my-2 prose-pre:my-2 prose-pre:bg-black/40 prose-code:text-white">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 py-1">
+                          <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" />
+                          <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.15s' }} />
+                          <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.3s' }} />
+                        </div>
+                      )
+                    ) : (
+                      m.text
+                    )}
                   </div>
                 </motion.div>
               ))}
-              {typing && (
-                <motion.div key="typing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex gap-3">
-                  <div className="h-8 w-8 rounded-xl grid place-items-center shrink-0" style={{ background: 'var(--gradient-neon)' }}>
-                    <Sparkles className="h-4 w-4 text-white" />
-                  </div>
-                  <div className="glass rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" />
-                    <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.15s' }} />
-                    <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.3s' }} />
-                  </div>
-                </motion.div>
-              )}
             </AnimatePresence>
           </div>
 
