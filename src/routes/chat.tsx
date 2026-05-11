@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2 } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Blobs } from "@/components/Blobs";
 
 type Mode = "default" | "genz" | "codey";
@@ -11,27 +13,6 @@ const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[
   { id: "genz", label: "Gen-Z", sub: "for humans", icon: Zap, emoji: "✨" },
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
 ];
-
-const REPLIES: Record<Mode, string[]> = {
-  default: [
-    "Interesting question. Let me break this down into a few key components for clarity.",
-    "Based on the available context, here's a structured approach: first, define the problem; second, explore constraints; third, evaluate trade-offs.",
-    "A reasonable framework here would be to consider both the technical and human factors before deciding.",
-    "Good prompt. The optimal answer depends on your priorities — do you want speed, accuracy, or coverage?",
-  ],
-  genz: [
-    "ok so here's the play ✨ break it into 3 steps, start with the easiest win, build momentum from there.",
-    "lowkey solid question — short answer: yes, but only if you nail the timing. long answer: depends on your audience + budget.",
-    "got u 💜 try this: pick one core idea, test it for a week, then double down on whatever sticks.",
-    "real talk — the move is to keep it simple. one goal, one metric, one deadline. everything else is noise.",
-  ],
-  codey: [
-    "Scaling thesis: compress the loop, 10x the throughput. Ship today, iterate at the edge. 🚀",
-    "First principles: strip it to atoms, rebuild leaner. Mars-tier ambition, Day-1 customer obsession.",
-    "Optimize for velocity. Burn the org chart. Move fast, write the press release first, reverse-engineer the product.",
-    "Bandwidth allocated. Treat this like a rocket — every gram matters. Cut, simplify, then accelerate.",
-  ],
-};
 
 export const Route = createFileRoute("/chat")({
   head: () => ({
