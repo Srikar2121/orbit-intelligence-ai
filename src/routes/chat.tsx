@@ -70,19 +70,70 @@ function ChatPage() {
     return () => window.removeEventListener("keydown", handler);
   }, [mode]);
 
-  const send = () => {
+  const send = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || typing) return;
     const userMsg: Msg = { id: String(Date.now()), role: "user", text };
-    setMessages((m) => [...m, userMsg]);
+    const aiId = "a" + Date.now();
+    setMessages((m) => [...m, userMsg, { id: aiId, role: "ai", text: "" }]);
     setInput("");
     setTyping(true);
-    setTimeout(() => {
-      const pool = REPLIES[mode];
-      const reply = pool[Math.floor(Math.random() * pool.length)];
-      setMessages((m) => [...m, { id: "a" + Date.now(), role: "ai", text: reply }]);
+
+    try {
+      const history = [...messages, userMsg]
+        .filter((m) => m.id !== "w" && !m.id.startsWith("sys"))
+        .map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text }));
+
+      const resp = await fetch("/api/public/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: history, mode }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const err = await resp.json().catch(() => ({ error: "Request failed" }));
+        setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: `⚠️ ${err.error || "Something went wrong."}` } : x));
+        setTyping(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acc = "";
+      let done = false;
+
+      while (!done) {
+        const { value, done: d } = await reader.read();
+        if (d) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") { done = true; break; }
+          try {
+            const json = JSON.parse(data);
+            const delta = json.choices?.[0]?.delta?.content;
+            if (delta) {
+              acc += delta;
+              setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: acc } : x));
+            }
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: "⚠️ Network error. Try again." } : x));
+    } finally {
       setTyping(false);
-    }, 1100);
+    }
   };
 
   return (
