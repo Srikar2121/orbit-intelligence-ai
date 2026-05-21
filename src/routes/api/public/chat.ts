@@ -21,7 +21,6 @@ export const Route = createFileRoute("/api/public/chat")({
             mode: Mode;
           };
 
-          const apiKey = process.env.LOVABLE_API_KEY;
 if (!apiKey) {
   return new Response(
     JSON.stringify({ messages: [] }),
