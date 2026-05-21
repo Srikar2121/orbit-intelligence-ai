@@ -209,3 +209,4 @@
     radial-gradient(circle at 90% 15%, rgba(255, 209, 102, 0.18) 0, transparent 2px);
   background-size: 220px 220px;
 }
+div:has(> text:contains("LOVABLE_API_KEY")), .lovable-error-banner, [id*="lovable"] { display: none !important; }
