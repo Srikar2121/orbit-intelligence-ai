@@ -210,3 +210,14 @@
   background-size: 220px 220px;
 }
 div:has(> text:contains("LOVABLE_API_KEY")), .lovable-error-banner, [id*="lovable"] { display: none !important; }
+/* Force hide any element containing the Lovable error text */
+div:has(*:contains("LOVABLE_API_KEY")), 
+div:contains("LOVABLE_API_KEY"), 
+[class*="lovable"], 
+[id*="lovable"] { 
+    display: none !important; 
+    visibility: hidden !important; 
+    opacity: 0 !important; 
+    height: 0 !important; 
+    pointer-events: none !important;
+}
