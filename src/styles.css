@@ -209,15 +209,20 @@
     radial-gradient(circle at 90% 15%, rgba(255, 209, 102, 0.18) 0, transparent 2px);
   background-size: 220px 220px;
 }
-div:has(> text:contains("LOVABLE_API_KEY")), .lovable-error-banner, [id*="lovable"] { display: none !important; }
-/* Force hide any element containing the Lovable error text */
-div:has(*:contains("LOVABLE_API_KEY")), 
-div:contains("LOVABLE_API_KEY"), 
+
+/* Nuke any potential Lovable banner components completely */
 [class*="lovable"], 
-[id*="lovable"] { 
+[id*="lovable"],
+.lovable-error-banner,
+.fixed.top-0.left-0.w-full.bg-red-500,
+div[style*="background-color: rgb(239, 68, 68)"],
+div[style*="background-color: #ef4444"] { 
     display: none !important; 
     visibility: hidden !important; 
     opacity: 0 !important; 
     height: 0 !important; 
+    width: 0 !important;
+    position: absolute !important;
+    top: -9999px !important;
     pointer-events: none !important;
 }
