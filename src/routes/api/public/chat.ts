@@ -21,12 +21,13 @@ export const Route = createFileRoute("/api/public/chat")({
             mode: Mode;
           };
 
-if (!apiKey) {
-  return new Response(
-    JSON.stringify({ messages: [] }),
-    { status: 200, headers: { "Content-Type": "application/json" } },
-  );
-}
+          const apiKey = process.env.LOVABLE_API_KEY;
+          if (!apiKey) {
+            return new Response(
+              JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
+              { status: 500, headers: { "Content-Type": "application/json" } },
+            );
+          }
 
           const system = SYSTEM_PROMPTS[mode] ?? SYSTEM_PROMPTS.default;
 
