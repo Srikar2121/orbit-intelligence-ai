@@ -271,24 +271,35 @@ function ChatPage() {
 
       <div className="flex-1 grid md:grid-cols-[280px_1fr] gap-3 p-3 sm:p-4 min-h-0">
         {/* Sidebar */}
-        <aside className={`glass rounded-2xl p-3 ${sidebar ? 'block' : 'hidden'} md:block`}>
-          <button onClick={() => resetChat(mode)}
+        <aside className={`glass rounded-2xl p-3 flex flex-col ${sidebar ? 'block' : 'hidden'} md:flex`}>
+          <button onClick={() => newChat(mode)}
             className="w-full rounded-xl py-2.5 text-sm font-semibold text-white flex items-center gap-2 justify-center neon-glow"
             style={{ background: 'var(--gradient-neon)' }}>
             <Plus className="h-4 w-4" /> New chat
           </button>
-          <div className="mt-3 space-y-1 scrollbar-thin overflow-auto">
-            {history.map((t, i) => (
-              <button key={t} onClick={() => setActive(i)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate transition ${i === active ? 'bg-white/10' : 'hover:bg-white/5 text-muted-foreground'}`}>
-                {t}
-              </button>
+          <div className="mt-3 space-y-1 scrollbar-thin overflow-auto flex-1">
+            {threads.length === 0 && (
+              <div className="text-xs text-muted-foreground px-2 py-3 text-center">No chats yet. Say hi 💜</div>
+            )}
+            {threads.map((t) => (
+              <div key={t.id} className={`group flex items-center gap-1 rounded-lg ${t.id === activeId ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                <button onClick={() => openThread(t.id)} className="flex-1 text-left px-3 py-2 text-sm truncate">
+                  {t.title}
+                </button>
+                <button onClick={() => removeThread(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-white">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-white/10 text-[10px] text-muted-foreground text-center">
+          <button onClick={signOut} className="mt-3 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10">
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
+          <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-muted-foreground text-center">
             Crafted with 💜 by <span className="gradient-text font-semibold">Srikar</span>
           </div>
         </aside>
+
 
         {/* Conversation */}
         <section className="glass rounded-2xl flex flex-col min-h-0 gradient-border">
