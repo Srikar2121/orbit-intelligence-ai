@@ -1,10 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2 } from "lucide-react";
+import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Blobs } from "@/components/Blobs";
+import { useServerFn } from "@tanstack/react-start";
+import { listThreads, createThread, deleteThread, loadMessages, saveMessage } from "@/lib/chat.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
 
 type Mode = "default" | "genz" | "codey";
 
