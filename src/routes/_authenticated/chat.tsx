@@ -1,10 +1,15 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2 } from "lucide-react";
+import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Blobs } from "@/components/Blobs";
+import { useServerFn } from "@tanstack/react-start";
+import { listThreads, createThread, deleteThread, loadMessages, saveMessage } from "@/lib/chat.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
 
 type Mode = "default" | "genz" | "codey";
 
@@ -14,7 +19,7 @@ const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
 ];
 
-export const Route = createFileRoute("/chat")({
+export const Route = createFileRoute("/_authenticated/chat")({
   head: () => ({
     meta: [
       { title: "Chat · OrbitIntelligenceAI" },
@@ -32,15 +37,20 @@ const WELCOME: Record<Mode, string> = {
   codey: "OrbitIntelligence online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
 };
 
+type Thread = { id: string; title: string; mode: string; updated_at: string };
+
 function ChatPage() {
-  const [history] = useState([
-    "Welcome chat", "Resume rewrite", "Tokyo trip", "Startup names", "Late night thoughts"
-  ]);
-  const [active, setActive] = useState(0);
+  const navigate = useNavigate();
+  const list = useServerFn(listThreads);
+  const create = useServerFn(createThread);
+  const remove = useServerFn(deleteThread);
+  const load = useServerFn(loadMessages);
+  const save = useServerFn(saveMessage);
+
+  const [threads, setThreads] = useState<Thread[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("genz");
-  const [messages, setMessages] = useState<Msg[]>([
-    { id: "w", role: "ai", text: WELCOME["genz"] },
-  ]);
+  const [messages, setMessages] = useState<Msg[]>([{ id: "w", role: "ai", text: WELCOME["genz"] }]);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [sidebar, setSidebar] = useState(false);
@@ -50,38 +60,105 @@ function ChatPage() {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing]);
 
-  const resetChat = (m: Mode) => {
+  const refreshThreads = useCallback(async () => {
+    try {
+      const rows = await list();
+      setThreads(rows as Thread[]);
+      return rows as Thread[];
+    } catch {
+      return [];
+    }
+  }, [list]);
+
+  useEffect(() => {
+    refreshThreads();
+  }, [refreshThreads]);
+
+  const openThread = async (id: string) => {
+    setActiveId(id);
+    const t = threads.find((x) => x.id === id);
+    if (t) setMode(t.mode as Mode);
+    try {
+      const rows = (await load({ data: { threadId: id } })) as { id: string; role: "user" | "assistant"; content: string }[];
+      setMessages(
+        rows.length
+          ? rows.map((r) => ({ id: r.id, role: r.role === "assistant" ? "ai" : "user", text: r.content }))
+          : [{ id: "w" + id, role: "ai", text: WELCOME[(t?.mode as Mode) ?? "genz"] }],
+      );
+    } catch {
+      toast.error("Couldn't load this conversation.");
+    }
+  };
+
+  const newChat = (m: Mode = mode) => {
+    setActiveId(null);
     setMessages([{ id: "w" + Date.now(), role: "ai", text: WELCOME[m] }]);
+  };
+
+  const removeThread = async (id: string) => {
+    try {
+      await remove({ data: { id } });
+      if (activeId === id) newChat(mode);
+      setThreads((t) => t.filter((x) => x.id !== id));
+    } catch {
+      toast.error("Couldn't delete chat.");
+    }
   };
 
   const switchMode = (m: Mode) => {
     setMode(m);
-    setMessages((prev) => [...prev, { id: "sys" + Date.now(), role: "ai", text: `⚡ Switched to ${MODES.find(x => x.id === m)?.label} mode — ${MODES.find(x => x.id === m)?.sub}.` }]);
+    setMessages((prev) => [
+      ...prev,
+      { id: "sys" + Date.now(), role: "ai", text: `⚡ Switched to ${MODES.find((x) => x.id === m)?.label} mode — ${MODES.find((x) => x.id === m)?.sub}.` },
+    ]);
   };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
-        resetChat(mode);
+        newChat(mode);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate({ to: "/auth" });
+  };
 
   const send = async () => {
     const text = input.trim();
     if (!text || typing) return;
+
+    let threadId = activeId;
+    if (!threadId) {
+      try {
+        const t = (await create({ data: { title: text.slice(0, 60), mode } })) as Thread;
+        threadId = t.id;
+        setActiveId(t.id);
+        setThreads((prev) => [t, ...prev]);
+      } catch {
+        toast.error("Couldn't start chat.");
+        return;
+      }
+    }
+
     const userMsg: Msg = { id: String(Date.now()), role: "user", text };
     const aiId = "a" + Date.now();
     setMessages((m) => [...m, userMsg, { id: aiId, role: "ai", text: "" }]);
     setInput("");
     setTyping(true);
 
+    // Persist user message
+    save({ data: { threadId, role: "user", content: text } }).catch(() => {});
+
     try {
       const history = [...messages, userMsg]
-        .filter((m) => m.id !== "w" && !m.id.startsWith("sys"))
+        .filter((m) => !m.id.startsWith("w") && !m.id.startsWith("sys"))
         .map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text }));
 
       const resp = await fetch("/api/public/chat", {
@@ -92,7 +169,7 @@ function ChatPage() {
 
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Request failed" }));
-        setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: `⚠️ ${err.error || "Something went wrong."}` } : x));
+        setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, text: `⚠️ ${err.error || "Something went wrong."}` } : x)));
         setTyping(false);
         return;
       }
@@ -120,7 +197,7 @@ function ChatPage() {
             const delta = json.choices?.[0]?.delta?.content;
             if (delta) {
               acc += delta;
-              setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: acc } : x));
+              setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, text: acc } : x)));
             }
           } catch {
             buffer = line + "\n" + buffer;
@@ -128,13 +205,19 @@ function ChatPage() {
           }
         }
       }
+
+      if (acc && threadId) {
+        save({ data: { threadId, role: "assistant", content: acc } }).catch(() => {});
+        refreshThreads();
+      }
     } catch (e) {
       console.error(e);
-      setMessages((m) => m.map((x) => x.id === aiId ? { ...x, text: "⚠️ Network error. Try again." } : x));
+      setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, text: "⚠️ Network error. Try again." } : x)));
     } finally {
       setTyping(false);
     }
   };
+
 
   return (
     <div className={`relative min-h-screen flex flex-col mode-${mode} transition-colors duration-500`}>
@@ -188,24 +271,35 @@ function ChatPage() {
 
       <div className="flex-1 grid md:grid-cols-[280px_1fr] gap-3 p-3 sm:p-4 min-h-0">
         {/* Sidebar */}
-        <aside className={`glass rounded-2xl p-3 ${sidebar ? 'block' : 'hidden'} md:block`}>
-          <button onClick={() => resetChat(mode)}
+        <aside className={`glass rounded-2xl p-3 flex flex-col ${sidebar ? 'block' : 'hidden'} md:flex`}>
+          <button onClick={() => newChat(mode)}
             className="w-full rounded-xl py-2.5 text-sm font-semibold text-white flex items-center gap-2 justify-center neon-glow"
             style={{ background: 'var(--gradient-neon)' }}>
             <Plus className="h-4 w-4" /> New chat
           </button>
-          <div className="mt-3 space-y-1 scrollbar-thin overflow-auto">
-            {history.map((t, i) => (
-              <button key={t} onClick={() => setActive(i)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm truncate transition ${i === active ? 'bg-white/10' : 'hover:bg-white/5 text-muted-foreground'}`}>
-                {t}
-              </button>
+          <div className="mt-3 space-y-1 scrollbar-thin overflow-auto flex-1">
+            {threads.length === 0 && (
+              <div className="text-xs text-muted-foreground px-2 py-3 text-center">No chats yet. Say hi 💜</div>
+            )}
+            {threads.map((t) => (
+              <div key={t.id} className={`group flex items-center gap-1 rounded-lg ${t.id === activeId ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                <button onClick={() => openThread(t.id)} className="flex-1 text-left px-3 py-2 text-sm truncate">
+                  {t.title}
+                </button>
+                <button onClick={() => removeThread(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-white">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
             ))}
           </div>
-          <div className="mt-4 pt-4 border-t border-white/10 text-[10px] text-muted-foreground text-center">
+          <button onClick={signOut} className="mt-3 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10">
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
+          <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-muted-foreground text-center">
             Crafted with 💜 by <span className="gradient-text font-semibold">Srikar</span>
           </div>
         </aside>
+
 
         {/* Conversation */}
         <section className="glass rounded-2xl flex flex-col min-h-0 gradient-border">
