@@ -76,12 +76,38 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_usage: {
+        Row: {
+          count: number
+          day: string
+          model: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          day?: string
+          model: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          model?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           birth_date: string
           created_at: string
           id: string
+          plan: string
+          plan_expires_at: string | null
           updated_at: string
           username: string
         }
@@ -90,6 +116,8 @@ export type Database = {
           birth_date: string
           created_at?: string
           id: string
+          plan?: string
+          plan_expires_at?: string | null
           updated_at?: string
           username: string
         }
@@ -98,6 +126,8 @@ export type Database = {
           birth_date?: string
           created_at?: string
           id?: string
+          plan?: string
+          plan_expires_at?: string | null
           updated_at?: string
           username?: string
         }
@@ -108,7 +138,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      consume_chat_quota: {
+        Args: { _model: string }
+        Returns: {
+          allowed: boolean
+          plan: string
+          quota: number
+          used: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

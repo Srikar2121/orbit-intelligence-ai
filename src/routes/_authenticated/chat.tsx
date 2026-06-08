@@ -1,22 +1,23 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2 } from "lucide-react";
+import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2, Rocket, Lock, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
-import { listThreads, createThread, deleteThread, loadMessages, saveMessage } from "@/lib/chat.functions";
+import { listThreads, createThread, deleteThread, loadMessages, saveMessage, consumeQuota, getPlanStatus } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 
-type Mode = "default" | "genz" | "codey";
+type Mode = "default" | "genz" | "codey" | "fast";
 
-const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[] = [
+const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string; plus?: boolean }[] = [
   { id: "default", label: "Default", sub: "for the nerds", icon: Brain, emoji: "🧠" },
   { id: "genz", label: "Gen-Z", sub: "for humans", icon: Zap, emoji: "✨" },
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
+  { id: "fast", label: "Fast", sub: "Plus · faster thinking", icon: Rocket, emoji: "⚡", plus: true },
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
@@ -35,6 +36,7 @@ const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm OrbitIntelligenceAI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
   genz: "hey 💜 orbit here in Gen-Z mode — casual but actually useful. what are we figuring out?",
   codey: "OrbitIntelligence online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
+  fast: "⚡ Fast mode online — Plus-tier reasoning at high speed. What do you want to crush?",
 };
 
 type Thread = { id: string; title: string; mode: string; updated_at: string };
@@ -46,6 +48,8 @@ function ChatPage() {
   const remove = useServerFn(deleteThread);
   const load = useServerFn(loadMessages);
   const save = useServerFn(saveMessage);
+  const consume = useServerFn(consumeQuota);
+  const planStatus = useServerFn(getPlanStatus);
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -54,7 +58,14 @@ function ChatPage() {
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [sidebar, setSidebar] = useState(false);
+  const [plan, setPlan] = useState<"free" | "plus">("free");
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<{ kind: "limit" | "feature"; model?: string; quota?: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    planStatus().then((s: any) => setPlan(s.plan)).catch(() => {});
+  }, [planStatus]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -106,6 +117,11 @@ function ChatPage() {
   };
 
   const switchMode = (m: Mode) => {
+    if (m === "fast" && plan !== "plus") {
+      setUpgradeReason({ kind: "feature" });
+      setUpgradeOpen(true);
+      return;
+    }
     setMode(m);
     setMessages((prev) => [
       ...prev,
@@ -133,6 +149,21 @@ function ChatPage() {
   const send = async () => {
     const text = input.trim();
     if (!text || typing) return;
+
+    // Enforce per-model daily quota BEFORE creating thread / streaming
+    try {
+      const q = await consume({ data: { model: mode } });
+      if (!q.allowed) {
+        setUpgradeReason({ kind: "limit", model: mode, quota: q.quota });
+        setUpgradeOpen(true);
+        return;
+      }
+      setPlan(q.plan === "plus" ? "plus" : "free");
+    } catch (e) {
+      toast.error("Couldn't check daily limit. Try again.");
+      return;
+    }
+
 
     let threadId = activeId;
     if (!threadId) {
@@ -361,6 +392,62 @@ function ChatPage() {
           </div>
         </section>
       </div>
+
+      {/* Upgrade / Out-of-credits modal */}
+      <AnimatePresence>
+        {upgradeOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setUpgradeOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass gradient-border rounded-3xl p-6 sm:p-8 max-w-md w-full relative"
+            >
+              <button onClick={() => setUpgradeOpen(false)} className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+              <div className="h-12 w-12 rounded-2xl grid place-items-center neon-glow mb-4" style={{ background: "var(--gradient-neon)" }}>
+                {upgradeReason?.kind === "limit" ? <Lock className="h-6 w-6 text-white" /> : <Rocket className="h-6 w-6 text-white" />}
+              </div>
+              <h2 className="text-xl font-bold gradient-text mb-1">
+                {upgradeReason?.kind === "limit" ? "You're out of chats today" : "Fast mode is a Plus feature"}
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                {upgradeReason?.kind === "limit"
+                  ? `You've used all ${upgradeReason.quota} of your daily ${MODES.find((m) => m.id === upgradeReason.model)?.label} messages. Upgrade to Orbit Plus for 30/day on every model + faster thinking.`
+                  : "Unlock ⚡ Fast — Plus-tier faster reasoning, plus 30 messages/day per model."}
+              </p>
+              <div className="glass rounded-2xl p-4 mb-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold gradient-text">$20</span>
+                  <span className="text-xs text-muted-foreground">/ 6 months</span>
+                </div>
+                <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                  <li>✨ 30 messages/day on every model</li>
+                  <li>⚡ Fast mode — faster thinking</li>
+                  <li>💜 Priority access to new modes</li>
+                </ul>
+              </div>
+              <button
+                onClick={() => {
+                  toast.message("Plus checkout coming soon — payments setup in progress.");
+                  setUpgradeOpen(false);
+                }}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-white neon-glow"
+                style={{ background: "var(--gradient-neon)" }}
+              >
+                Upgrade to Plus — $20 / 6 months
+              </button>
+              <button onClick={() => setUpgradeOpen(false)} className="w-full mt-2 text-xs text-muted-foreground hover:text-white py-2">
+                Maybe later
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
