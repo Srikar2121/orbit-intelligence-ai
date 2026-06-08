@@ -46,8 +46,8 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        if (!birth || ageFrom(birth) < 13) {
-          toast.error("You must be at least 13 years old.");
+        if (!birth || ageFrom(birth) < 9) {
+          toast.error("You must be at least 9 years old.");
           setBusy(false);
           return;
         }
