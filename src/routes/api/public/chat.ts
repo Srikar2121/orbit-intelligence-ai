@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/public/chat")({
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                model: "google/gemini-3-flash-preview",
+                model: MODEL_FOR_MODE[mode] ?? MODEL_FOR_MODE.default,
                 messages: [{ role: "system", content: system }, ...messages],
                 stream: true,
               }),
