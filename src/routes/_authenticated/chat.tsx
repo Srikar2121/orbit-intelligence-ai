@@ -48,6 +48,8 @@ function ChatPage() {
   const remove = useServerFn(deleteThread);
   const load = useServerFn(loadMessages);
   const save = useServerFn(saveMessage);
+  const consume = useServerFn(consumeQuota);
+  const planStatus = useServerFn(getPlanStatus);
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -56,7 +58,14 @@ function ChatPage() {
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const [sidebar, setSidebar] = useState(false);
+  const [plan, setPlan] = useState<"free" | "plus">("free");
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<{ kind: "limit" | "feature"; model?: string; quota?: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    planStatus().then((s: any) => setPlan(s.plan)).catch(() => {});
+  }, [planStatus]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
