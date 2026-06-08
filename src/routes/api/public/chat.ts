@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-type Mode = "default" | "genz" | "codey";
+type Mode = "default" | "genz" | "codey" | "fast";
 
 const SYSTEM_PROMPTS: Record<Mode, string> = {
   default:
@@ -9,6 +9,15 @@ const SYSTEM_PROMPTS: Record<Mode, string> = {
     "You are OrbitIntelligenceAI in Gen-Z mode — casual but actually useful. Keep replies friendly, lowercase-leaning, with light slang and the occasional emoji (✨💜) but ALWAYS substantive and correct. Use markdown when it helps. You were created by Srikar.",
   codey:
     "You are OrbitIntelligenceAI in Codey mode — engineer-brained, first-principles, ship-fast. Lean technical: prefer code blocks, concrete steps, big-picture systems thinking. Use markdown freely. You were created by Srikar.",
+  fast:
+    "You are OrbitIntelligenceAI in Fast mode — Plus-tier. Think quickly and decisively. Be sharp, direct, and concise while staying accurate. Use markdown when it helps. You were created by Srikar.",
+};
+
+const MODEL_FOR_MODE: Record<Mode, string> = {
+  default: "google/gemini-3-flash-preview",
+  genz: "google/gemini-3-flash-preview",
+  codey: "google/gemini-3-flash-preview",
+  fast: "google/gemini-3.5-flash",
 };
 
 export const Route = createFileRoute("/api/public/chat")({
