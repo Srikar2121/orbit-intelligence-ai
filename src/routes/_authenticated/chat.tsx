@@ -392,6 +392,62 @@ function ChatPage() {
           </div>
         </section>
       </div>
+
+      {/* Upgrade / Out-of-credits modal */}
+      <AnimatePresence>
+        {upgradeOpen && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setUpgradeOpen(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass gradient-border rounded-3xl p-6 sm:p-8 max-w-md w-full relative"
+            >
+              <button onClick={() => setUpgradeOpen(false)} className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+              <div className="h-12 w-12 rounded-2xl grid place-items-center neon-glow mb-4" style={{ background: "var(--gradient-neon)" }}>
+                {upgradeReason?.kind === "limit" ? <Lock className="h-6 w-6 text-white" /> : <Rocket className="h-6 w-6 text-white" />}
+              </div>
+              <h2 className="text-xl font-bold gradient-text mb-1">
+                {upgradeReason?.kind === "limit" ? "You're out of chats today" : "Fast mode is a Plus feature"}
+              </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                {upgradeReason?.kind === "limit"
+                  ? `You've used all ${upgradeReason.quota} of your daily ${MODES.find((m) => m.id === upgradeReason.model)?.label} messages. Upgrade to Orbit Plus for 30/day on every model + faster thinking.`
+                  : "Unlock ⚡ Fast — Plus-tier faster reasoning, plus 30 messages/day per model."}
+              </p>
+              <div className="glass rounded-2xl p-4 mb-4">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold gradient-text">$20</span>
+                  <span className="text-xs text-muted-foreground">/ 6 months</span>
+                </div>
+                <ul className="text-xs text-muted-foreground mt-2 space-y-1">
+                  <li>✨ 30 messages/day on every model</li>
+                  <li>⚡ Fast mode — faster thinking</li>
+                  <li>💜 Priority access to new modes</li>
+                </ul>
+              </div>
+              <button
+                onClick={() => {
+                  toast.message("Plus checkout coming soon — payments setup in progress.");
+                  setUpgradeOpen(false);
+                }}
+                className="w-full rounded-xl py-3 text-sm font-semibold text-white neon-glow"
+                style={{ background: "var(--gradient-neon)" }}
+              >
+                Upgrade to Plus — $20 / 6 months
+              </button>
+              <button onClick={() => setUpgradeOpen(false)} className="w-full mt-2 text-xs text-muted-foreground hover:text-white py-2">
+                Maybe later
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
