@@ -36,6 +36,7 @@ const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm OrbitIntelligenceAI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
   genz: "hey 💜 orbit here in Gen-Z mode — casual but actually useful. what are we figuring out?",
   codey: "OrbitIntelligence online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
+  fast: "⚡ Fast mode online — Plus-tier reasoning at high speed. What do you want to crush?",
 };
 
 type Thread = { id: string; title: string; mode: string; updated_at: string };
