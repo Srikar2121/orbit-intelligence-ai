@@ -122,3 +122,32 @@ export const upsertProfile = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const consumeQuota = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ model: z.enum(["default", "genz", "codey", "fast"]) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("consume_chat_quota", { _model: data.model });
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    return row as { allowed: boolean; used: number; quota: number; plan: string };
+  });
+
+export const getPlanStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const [{ data: profile }, { data: usage }] = await Promise.all([
+      context.supabase.from("profiles").select("plan, plan_expires_at").eq("id", context.userId).maybeSingle(),
+      context.supabase.from("chat_usage").select("model, count").eq("user_id", context.userId).eq("day", today),
+    ]);
+    const isPlus =
+      profile?.plan === "plus" && (!profile.plan_expires_at || new Date(profile.plan_expires_at) > new Date());
+    return {
+      plan: isPlus ? "plus" : "free",
+      quota: isPlus ? 30 : 20,
+      usage: (usage ?? []) as { model: string; count: number }[],
+    };
+  });
