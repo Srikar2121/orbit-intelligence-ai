@@ -1,9 +1,10 @@
-type Props = { variant?: "default" | "genz" | "codey" };
+type Props = { variant?: "default" | "genz" | "codey" | "fast" };
 
 const PALETTES: Record<NonNullable<Props["variant"]>, [string, string, string]> = {
   default: ["#7C4DFF", "#00E5FF", "#A78BFA"],
   genz: ["#FF4D9D", "#FFD166", "#7C4DFF"],
   codey: ["#00E5FF", "#22C55E", "#0EA5E9"],
+  fast: ["#FBBF24", "#F472B6", "#A78BFA"],
 };
 
 export function Blobs({ variant = "default" }: Props) {
