@@ -150,6 +150,21 @@ function ChatPage() {
     const text = input.trim();
     if (!text || typing) return;
 
+    // Enforce per-model daily quota BEFORE creating thread / streaming
+    try {
+      const q = await consume({ data: { model: mode } });
+      if (!q.allowed) {
+        setUpgradeReason({ kind: "limit", model: mode, quota: q.quota });
+        setUpgradeOpen(true);
+        return;
+      }
+      setPlan(q.plan === "plus" ? "plus" : "free");
+    } catch (e) {
+      toast.error("Couldn't check daily limit. Try again.");
+      return;
+    }
+
+
     let threadId = activeId;
     if (!threadId) {
       try {
