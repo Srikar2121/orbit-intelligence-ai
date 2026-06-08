@@ -1,22 +1,23 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2 } from "lucide-react";
+import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2, Rocket, Lock, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
-import { listThreads, createThread, deleteThread, loadMessages, saveMessage } from "@/lib/chat.functions";
+import { listThreads, createThread, deleteThread, loadMessages, saveMessage, consumeQuota, getPlanStatus } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 
-type Mode = "default" | "genz" | "codey";
+type Mode = "default" | "genz" | "codey" | "fast";
 
-const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[] = [
+const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string; plus?: boolean }[] = [
   { id: "default", label: "Default", sub: "for the nerds", icon: Brain, emoji: "🧠" },
   { id: "genz", label: "Gen-Z", sub: "for humans", icon: Zap, emoji: "✨" },
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
+  { id: "fast", label: "Fast", sub: "Plus · faster thinking", icon: Rocket, emoji: "⚡", plus: true },
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
