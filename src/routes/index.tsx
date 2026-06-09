@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { Blobs } from "@/components/Blobs";
 import { Navbar } from "@/components/Navbar";
@@ -8,6 +8,7 @@ import { ChatPreview } from "@/components/ChatPreview";
 import { Testimonials } from "@/components/Testimonials";
 import { Footer } from "@/components/Footer";
 import { Onboarding } from "@/components/Onboarding";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,6 +19,13 @@ export const Route = createFileRoute("/")({
       { property: "og:description", content: "A premium Gen-Z AI chat experience. Created by Srikar." },
     ],
   }),
+  beforeLoad: async () => {
+    if (typeof window === "undefined") return;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) {
+      throw redirect({ to: "/auth" });
+    }
+  },
   component: Index,
 });
 
