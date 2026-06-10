@@ -4,7 +4,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
 
 @theme inline {
   --font-display: 'Sora', system-ui, sans-serif;
