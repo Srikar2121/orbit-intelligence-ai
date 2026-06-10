@@ -8,6 +8,7 @@ import { ChatPreview } from "@/components/ChatPreview";
 import { Testimonials } from "@/components/Testimonials";
 import { Footer } from "@/components/Footer";
 import { Onboarding } from "@/components/Onboarding";
+import { PrivacyPopup } from "@/components/PrivacyPopup";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -45,6 +46,7 @@ function Index() {
       </main>
       <Footer />
       <Onboarding />
+      <PrivacyPopup />
     </div>
   );
 }
