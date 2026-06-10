@@ -46,6 +46,7 @@ function Index() {
       </main>
       <Footer />
       <Onboarding />
+      <PrivacyPopup />
     </div>
   );
 }
