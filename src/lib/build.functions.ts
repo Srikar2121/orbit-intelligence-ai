@@ -118,7 +118,11 @@ export const updateBuildProject = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: {
+      files?: Record<string, string>;
+      name?: string;
+      description?: string | null;
+    } = {};
     if (data.files) patch.files = data.files;
     if (data.name) patch.name = data.name;
     if (data.description !== undefined) patch.description = data.description;
