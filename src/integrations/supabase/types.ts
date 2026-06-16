@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      build_projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          files: Json
+          framework: string
+          id: string
+          last_deploy_status: string | null
+          last_deploy_url: string | null
+          last_deployed_at: string | null
+          name: string
+          updated_at: string
+          user_id: string
+          vercel_project_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          files?: Json
+          framework?: string
+          id?: string
+          last_deploy_status?: string | null
+          last_deploy_url?: string | null
+          last_deployed_at?: string | null
+          name: string
+          updated_at?: string
+          user_id: string
+          vercel_project_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          files?: Json
+          framework?: string
+          id?: string
+          last_deploy_status?: string | null
+          last_deploy_url?: string | null
+          last_deployed_at?: string | null
+          name?: string
+          updated_at?: string
+          user_id?: string
+          vercel_project_id?: string | null
+        }
+        Relationships: []
+      }
       chat_messages: {
         Row: {
           content: string
@@ -110,6 +155,7 @@ export type Database = {
           plan_expires_at: string | null
           updated_at: string
           username: string
+          vercel_token: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -120,6 +166,7 @@ export type Database = {
           plan_expires_at?: string | null
           updated_at?: string
           username: string
+          vercel_token?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -130,6 +177,7 @@ export type Database = {
           plan_expires_at?: string | null
           updated_at?: string
           username?: string
+          vercel_token?: string | null
         }
         Relationships: []
       }
