@@ -323,7 +323,10 @@ function ChatPage() {
               </div>
             ))}
           </div>
-          <button onClick={signOut} className="mt-3 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10">
+          <Link to="/build" className="mt-3 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10 border border-emerald-500/30 text-emerald-300">
+            <Code2 className="h-3.5 w-3.5" /> Build Mode
+          </Link>
+          <button onClick={signOut} className="mt-2 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10">
             <LogOut className="h-3.5 w-3.5" /> Sign out
           </button>
           <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-muted-foreground text-center">
