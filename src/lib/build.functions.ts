@@ -58,6 +58,31 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 `,
   "src/index.css": `body { margin: 0; background: #0a0a0a; color: white; }
 `,
+  "public/manifest.webmanifest": JSON.stringify(
+    {
+      name: "My App",
+      short_name: "MyApp",
+      start_url: "/",
+      display: "standalone",
+      background_color: "#0a0a0a",
+      theme_color: "#10b981",
+      icons: [
+        { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
+        { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      ],
+    },
+    null,
+    2,
+  ),
+  "public/sw.js": `const CACHE='app-v1';
+self.addEventListener('install',()=>self.skipWaiting());
+self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',e=>{
+  e.respondWith(fetch(e.request).then(r=>{
+    const c=r.clone();caches.open(CACHE).then(ca=>ca.put(e.request,c));return r;
+  }).catch(()=>caches.match(e.request)));
+});
+`,
 };
 
 export const listBuildProjects = createServerFn({ method: "GET" })
