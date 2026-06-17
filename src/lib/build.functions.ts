@@ -358,3 +358,164 @@ export const deployToVercel = createServerFn({ method: "POST" })
 
     return { url: deployUrl, deploymentId: body.id };
   });
+
+// Multi-turn chat that can modify the project
+export const chatBuild = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projectId: z.string().uuid(),
+        messages: z
+          .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+          .min(1),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+    const { data: project, error: pErr } = await context.supabase
+      .from("build_projects")
+      .select("files")
+      .eq("id", data.projectId)
+      .single();
+    if (pErr) throw new Error(pErr.message);
+
+    const existing = (project.files ?? {}) as Record<string, string>;
+    const fileList = Object.keys(existing).join("\n");
+
+    const system = `You are a friendly AI site/page builder for a React + Vite project. The user is chatting with you to build a website.
+
+You may modify project files. When you want to write/update files, end your reply with a JSON code block (one only) of the exact shape:
+\`\`\`json
+{"reply":"short friendly summary","files":{"path/to/file.jsx":"FULL FILE CONTENTS",...}}
+\`\`\`
+
+If you only want to chat (no file changes), still respond with the same JSON shape but with an empty files object.
+
+Rules:
+- Only include files you create/modify; omit unchanged files.
+- React 18 + Vite. Use .jsx. Deps available: react, react-dom, vite, @vitejs/plugin-react.
+- For routing/multi-page apps, use react-router-dom (add to package.json deps if needed).
+- Keep files complete and runnable.
+
+Current project files:
+${fileList}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: system },
+          ...data.messages,
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) throw new Error("AI rate limit. Try again shortly.");
+      if (response.status === 402) throw new Error("AI credits exhausted.");
+      throw new Error(`AI gateway error: ${response.status}`);
+    }
+
+    const json = (await response.json()) as { choices?: { message?: { content?: string } }[] };
+    const content = json.choices?.[0]?.message?.content ?? "{}";
+    let parsed: { reply?: string; files?: Record<string, string> };
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      parsed = { reply: content, files: {} };
+    }
+
+    const validFiles: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed.files ?? {})) {
+      if (typeof v === "string" && k.length < 200 && !k.includes("..")) validFiles[k] = v;
+    }
+
+    let merged = existing;
+    if (Object.keys(validFiles).length > 0) {
+      merged = { ...existing, ...validFiles };
+      const { error: uErr } = await context.supabase
+        .from("build_projects")
+        .update({ files: merged })
+        .eq("id", data.projectId);
+      if (uErr) throw new Error(uErr.message);
+    }
+
+    return {
+      reply: parsed.reply ?? "Done.",
+      changedFiles: Object.keys(validFiles),
+      files: merged,
+    };
+  });
+
+// Quick "new page" generator
+export const generatePage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        projectId: z.string().uuid(),
+        pageName: z.string().min(1).max(40),
+        description: z.string().min(1).max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+    const { data: project, error: pErr } = await context.supabase
+      .from("build_projects")
+      .select("files")
+      .eq("id", data.projectId)
+      .single();
+    if (pErr) throw new Error(pErr.message);
+
+    const existing = (project.files ?? {}) as Record<string, string>;
+    const safeName = data.pageName.replace(/[^A-Za-z0-9]/g, "");
+    const componentName = safeName.charAt(0).toUpperCase() + safeName.slice(1);
+
+    const system = `You generate a single React page component for a Vite + React project. Output JSON only: {"files":{"src/pages/${componentName}.jsx":"..."}}.
+The component must be a default export named ${componentName}. Use inline styles or simple CSS. No imports beyond react.
+Existing files:
+${Object.keys(existing).join("\n")}`;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: `Page name: ${componentName}\nDescription: ${data.description}` },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) {
+      if (res.status === 429) throw new Error("AI rate limit.");
+      if (res.status === 402) throw new Error("AI credits exhausted.");
+      throw new Error(`AI gateway error: ${res.status}`);
+    }
+    const j = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    const parsed = JSON.parse(j.choices?.[0]?.message?.content ?? "{}") as {
+      files?: Record<string, string>;
+    };
+    const valid: Record<string, string> = {};
+    for (const [k, v] of Object.entries(parsed.files ?? {})) {
+      if (typeof v === "string" && k.length < 200 && !k.includes("..")) valid[k] = v;
+    }
+    const merged = { ...existing, ...valid };
+    const { error: uErr } = await context.supabase
+      .from("build_projects")
+      .update({ files: merged })
+      .eq("id", data.projectId);
+    if (uErr) throw new Error(uErr.message);
+    return { files: merged, changedFiles: Object.keys(valid), componentName };
+  });
