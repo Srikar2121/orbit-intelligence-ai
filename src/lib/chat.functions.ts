@@ -106,18 +106,31 @@ export const upsertProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        username: z.string().min(2).max(40).optional(),
-        birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+        username: z.string().min(2).max(40),
+        birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         avatar_url: z.string().url().optional().nullable(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const patch: { username?: string; birth_date?: string; avatar_url?: string | null } = {};
-    if (data.username !== undefined) patch.username = data.username;
-    if (data.birth_date !== undefined) patch.birth_date = data.birth_date;
-    if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
-    const { error } = await context.supabase.from("profiles").update(patch).eq("id", context.userId);
+    const { error } = await context.supabase.from("profiles").upsert({
+      id: context.userId,
+      username: data.username,
+      birth_date: data.birth_date,
+      avatar_url: data.avatar_url ?? null,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const updateAvatar = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ avatar_url: z.string().url().nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("profiles")
+      .update({ avatar_url: data.avatar_url })
+      .eq("id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
