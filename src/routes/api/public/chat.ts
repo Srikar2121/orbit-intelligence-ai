@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
+import type { Database } from "@/integrations/supabase/types";
 
 type Mode = "default" | "genz" | "codey" | "fast";
 
@@ -20,25 +23,90 @@ const MODEL_FOR_MODE: Record<Mode, string> = {
   fast: "google/gemini-3.5-flash",
 };
 
+const bodySchema = z.object({
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(["user", "assistant"]),
+        content: z.string().min(1).max(8000),
+      }),
+    )
+    .min(1)
+    .max(50),
+  mode: z.enum(["default", "genz", "codey", "fast"]),
+});
+
+function jsonError(message: string, status: number) {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
 export const Route = createFileRoute("/api/public/chat")({
   server: {
     handlers: {
       POST: async ({ request }) => {
         try {
-          const { messages, mode } = (await request.json()) as {
-            messages: { role: "user" | "assistant"; content: string }[];
-            mode: Mode;
-          };
+          // 1. Require Bearer token
+          const authHeader = request.headers.get("authorization") ?? "";
+          if (!authHeader.startsWith("Bearer ")) {
+            return jsonError("Unauthorized", 401);
+          }
+          const token = authHeader.slice(7).trim();
+          if (!token) return jsonError("Unauthorized", 401);
 
-          const apiKey = process.env.LOVABLE_API_KEY;
-          if (!apiKey) {
-            return new Response(
-              JSON.stringify({ error: "LOVABLE_API_KEY is not configured" }),
-              { status: 500, headers: { "Content-Type": "application/json" } },
-            );
+          const SUPABASE_URL = process.env.SUPABASE_URL;
+          const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
+          if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+            return jsonError("Server not configured", 500);
           }
 
-          const system = SYSTEM_PROMPTS[mode] ?? SYSTEM_PROMPTS.default;
+          const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+            global: { headers: { Authorization: `Bearer ${token}` } },
+            auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+          });
+
+          const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+          if (userErr || !userData?.user) return jsonError("Unauthorized", 401);
+
+          // 2. Validate payload
+          let parsed: z.infer<typeof bodySchema>;
+          try {
+            parsed = bodySchema.parse(await request.json());
+          } catch (e) {
+            return jsonError("Invalid request body", 400);
+          }
+          const { messages, mode } = parsed;
+
+          // 3. Fast mode requires an active Plus plan (server-verified)
+          if (mode === "fast") {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("plan, plan_expires_at")
+              .eq("id", userData.user.id)
+              .maybeSingle();
+            const isPlus =
+              profile?.plan === "plus" &&
+              (!profile.plan_expires_at || new Date(profile.plan_expires_at) > new Date());
+            if (!isPlus) return jsonError("Fast mode requires a Plus plan", 403);
+          }
+
+          // 4. Enforce per-model daily quota server-side
+          const { data: quotaRows, error: quotaErr } = await supabase.rpc(
+            "consume_chat_quota",
+            { _model: mode },
+          );
+          if (quotaErr) return jsonError("Quota check failed", 500);
+          const quota = Array.isArray(quotaRows) ? quotaRows[0] : quotaRows;
+          if (!quota?.allowed) {
+            return jsonError("Daily message limit reached", 429);
+          }
+
+          const apiKey = process.env.LOVABLE_API_KEY;
+          if (!apiKey) return jsonError("LOVABLE_API_KEY is not configured", 500);
+
+          const system = SYSTEM_PROMPTS[mode];
 
           const response = await fetch(
             "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -49,7 +117,7 @@ export const Route = createFileRoute("/api/public/chat")({
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                model: MODEL_FOR_MODE[mode] ?? MODEL_FOR_MODE.default,
+                model: MODEL_FOR_MODE[mode],
                 messages: [{ role: "system", content: system }, ...messages],
                 stream: true,
               }),
@@ -57,24 +125,12 @@ export const Route = createFileRoute("/api/public/chat")({
           );
 
           if (!response.ok) {
-            if (response.status === 429) {
-              return new Response(
-                JSON.stringify({ error: "Rate limit exceeded. Try again in a moment." }),
-                { status: 429, headers: { "Content-Type": "application/json" } },
-              );
-            }
-            if (response.status === 402) {
-              return new Response(
-                JSON.stringify({ error: "AI credits exhausted. Add funds in Settings → Workspace → Usage." }),
-                { status: 402, headers: { "Content-Type": "application/json" } },
-              );
-            }
+            if (response.status === 429) return jsonError("Rate limit exceeded. Try again in a moment.", 429);
+            if (response.status === 402)
+              return jsonError("AI credits exhausted. Add funds in Settings → Workspace → Usage.", 402);
             const t = await response.text();
             console.error("AI gateway error:", response.status, t);
-            return new Response(JSON.stringify({ error: "AI gateway error" }), {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            });
+            return jsonError("AI gateway error", 500);
           }
 
           return new Response(response.body, {
@@ -82,10 +138,7 @@ export const Route = createFileRoute("/api/public/chat")({
           });
         } catch (e) {
           console.error("chat route error:", e);
-          return new Response(
-            JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } },
-          );
+          return jsonError("Unknown error", 500);
         }
       },
     },
