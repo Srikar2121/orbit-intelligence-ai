@@ -192,9 +192,19 @@ function ChatPage() {
         .filter((m) => !m.id.startsWith("w") && !m.id.startsWith("sys"))
         .map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text }));
 
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        toast.error("Session expired. Please sign in again.");
+        navigate({ to: "/auth" });
+        return;
+      }
       const resp = await fetch("/api/public/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ messages: history, mode }),
       });
 
