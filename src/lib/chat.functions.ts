@@ -113,11 +113,11 @@ export const upsertProfile = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = { id: context.userId };
+    const patch: { username?: string; birth_date?: string; avatar_url?: string | null } = {};
     if (data.username !== undefined) patch.username = data.username;
     if (data.birth_date !== undefined) patch.birth_date = data.birth_date;
     if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
-    const { error } = await context.supabase.from("profiles").upsert(patch);
+    const { error } = await context.supabase.from("profiles").update(patch).eq("id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
