@@ -123,6 +123,18 @@ export const upsertProfile = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const updateAvatar = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ avatar_url: z.string().url().nullable() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("profiles")
+      .update({ avatar_url: data.avatar_url })
+      .eq("id", context.userId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
 export const consumeQuota = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>

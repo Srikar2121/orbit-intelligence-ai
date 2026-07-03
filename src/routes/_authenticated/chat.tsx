@@ -1,12 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2, Rocket, Lock, X } from "lucide-react";
+import {
+  Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2,
+  Rocket, Lock, X, Paperclip, Image as ImageIcon, User as UserIcon, Camera,
+} from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
-import { listThreads, createThread, deleteThread, loadMessages, saveMessage, consumeQuota, getPlanStatus } from "@/lib/chat.functions";
+import {
+  listThreads, createThread, deleteThread, loadMessages, saveMessage,
+  consumeQuota, getPlanStatus, getProfile, updateAvatar,
+} from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -30,7 +36,13 @@ export const Route = createFileRoute("/_authenticated/chat")({
   component: ChatPage,
 });
 
-type Msg = { id: string; role: "user" | "ai"; text: string };
+type Msg = {
+  id: string;
+  role: "user" | "ai";
+  text: string;
+  image?: string;          // data URL for generated / attached image
+  imageLoading?: boolean;  // apply blur while streaming partials
+};
 
 const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm OrbitIntelligenceAI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
@@ -41,6 +53,9 @@ const WELCOME: Record<Mode, string> = {
 
 type Thread = { id: string; title: string; mode: string; updated_at: string };
 
+const MAX_FILE_BYTES = 200_000; // 200KB per attached code/text file
+const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|xml|csv|tsv|log|env|gitignore|html?|css|scss|sass|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sh|bash|zsh|fish|sql|prisma|graphql|gql|vue|svelte|astro|lua|dart|ex|exs|erl|elm|hs|ml|nim|r|scala|clj|cljs|edn|proto|dockerfile|makefile|ini|conf)$/i;
+
 function ChatPage() {
   const navigate = useNavigate();
   const list = useServerFn(listThreads);
@@ -50,6 +65,8 @@ function ChatPage() {
   const save = useServerFn(saveMessage);
   const consume = useServerFn(consumeQuota);
   const planStatus = useServerFn(getPlanStatus);
+  const profileFn = useServerFn(getProfile);
+  const avatarFn = useServerFn(updateAvatar);
 
   const [threads, setThreads] = useState<Thread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -61,15 +78,31 @@ function ChatPage() {
   const [plan, setPlan] = useState<"free" | "plus">("free");
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState<{ kind: "limit" | "feature"; model?: string; quota?: number } | null>(null);
+  const [profile, setProfile] = useState<{ username: string | null; avatar_url: string | null } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [imageMode, setImageMode] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     planStatus().then((s: any) => setPlan(s.plan)).catch(() => {});
-  }, [planStatus]);
+    profileFn().then((p: any) => setProfile(p ?? null)).catch(() => {});
+  }, [planStatus, profileFn]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing]);
+
+  // Auto-resize the textarea (max 6 lines)
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    ta.style.height = "auto";
+    ta.style.height = Math.min(ta.scrollHeight, 180) + "px";
+  }, [input]);
 
   const refreshThreads = useCallback(async () => {
     try {
@@ -81,9 +114,7 @@ function ChatPage() {
     }
   }, [list]);
 
-  useEffect(() => {
-    refreshThreads();
-  }, [refreshThreads]);
+  useEffect(() => { refreshThreads(); }, [refreshThreads]);
 
   const openThread = async (id: string) => {
     setActiveId(id);
@@ -146,11 +177,129 @@ function ChatPage() {
     navigate({ to: "/auth" });
   };
 
+  // ---------- File attach (code/text files -> inline fenced block) ----------
+  const onAttachClick = () => fileInputRef.current?.click();
+  const onFilesChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    for (const f of files) {
+      if (!(TEXT_EXT.test(f.name) || f.type.startsWith("text/") || f.type === "application/json")) {
+        toast.error(`${f.name}: only text/code files are supported.`);
+        continue;
+      }
+      if (f.size > MAX_FILE_BYTES) {
+        toast.error(`${f.name}: file too large (max 200KB).`);
+        continue;
+      }
+      try {
+        const text = await f.text();
+        const lang = (f.name.split(".").pop() ?? "").toLowerCase();
+        const block = `\n\n\`\`\`${lang}\n// ${f.name}\n${text}\n\`\`\`\n`;
+        setInput((prev) => prev + block);
+        toast.success(`Attached ${f.name}`);
+      } catch {
+        toast.error(`Couldn't read ${f.name}`);
+      }
+    }
+    textareaRef.current?.focus();
+  };
+
+  // ---------- Image generation ----------
+  const generateImage = async (prompt: string) => {
+    if (!prompt.trim() || typing) return;
+    setTyping(true);
+    const userMsg: Msg = { id: String(Date.now()), role: "user", text: `🖼️ ${prompt}` };
+    const aiId = "img" + Date.now();
+    setMessages((m) => [...m, userMsg, { id: aiId, role: "ai", text: "", imageLoading: true }]);
+    setInput("");
+    setImageMode(false);
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) { navigate({ to: "/auth" }); return; }
+
+      const resp = await fetch("/api/public/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ prompt }),
+      });
+      if (!resp.ok || !resp.body) {
+        const err = await resp.json().catch(() => ({ error: "Image generation failed" }));
+        setMessages((m) => m.map((x) => x.id === aiId
+          ? { ...x, text: `⚠️ ${err.error || "Couldn't generate image."}`, imageLoading: false }
+          : x));
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let sawCompleted = false;
+      let streamError: string | undefined;
+      let currentEvent: string | undefined;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, idx);
+          buffer = buffer.slice(idx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line === "") { currentEvent = undefined; continue; }
+          if (line.startsWith(":")) continue;
+          if (line.startsWith("event: ")) { currentEvent = line.slice(7).trim(); continue; }
+          if (!line.startsWith("data: ")) continue;
+          const data = line.slice(6).trim();
+          if (data === "[DONE]") continue;
+          let payload: any;
+          try { payload = JSON.parse(data); } catch { continue; }
+          const type = payload?.type ?? currentEvent;
+          if (type === "error" || currentEvent === "error") {
+            streamError = payload?.error?.message ?? "Image generation failed";
+            continue;
+          }
+          if (type === "image_generation.partial_image" || type === "image_generation.completed") {
+            if (payload.b64_json) {
+              const isFinal = type === "image_generation.completed";
+              const dataUrl = `data:image/png;base64,${payload.b64_json}`;
+              setMessages((m) => m.map((x) => x.id === aiId
+                ? { ...x, image: dataUrl, imageLoading: !isFinal }
+                : x));
+              if (isFinal) sawCompleted = true;
+            }
+          }
+        }
+      }
+
+      if (streamError) {
+        setMessages((m) => m.map((x) => x.id === aiId
+          ? { ...x, text: `⚠️ ${streamError}`, imageLoading: false }
+          : x));
+      } else if (!sawCompleted) {
+        setMessages((m) => m.map((x) => x.id === aiId
+          ? { ...x, text: "⚠️ Image stream ended early.", imageLoading: false }
+          : x));
+      }
+    } catch (e) {
+      console.error(e);
+      setMessages((m) => m.map((x) => x.id === aiId
+        ? { ...x, text: "⚠️ Network error while generating image.", imageLoading: false }
+        : x));
+    } finally {
+      setTyping(false);
+    }
+  };
+
+  // ---------- Send (text) ----------
   const send = async () => {
     const text = input.trim();
     if (!text || typing) return;
 
-    // Enforce per-model daily quota BEFORE creating thread / streaming
+    if (imageMode) { await generateImage(text); return; }
+
     try {
       const q = await consume({ data: { model: mode } });
       if (!q.allowed) {
@@ -159,16 +308,15 @@ function ChatPage() {
         return;
       }
       setPlan(q.plan === "plus" ? "plus" : "free");
-    } catch (e) {
+    } catch {
       toast.error("Couldn't check daily limit. Try again.");
       return;
     }
 
-
     let threadId = activeId;
     if (!threadId) {
       try {
-        const t = (await create({ data: { title: text.slice(0, 60), mode } })) as Thread;
+        const t = (await create({ data: { title: text.slice(0, 60), mode: mode === "fast" ? "default" : mode } })) as Thread;
         threadId = t.id;
         setActiveId(t.id);
         setThreads((prev) => [t, ...prev]);
@@ -184,12 +332,11 @@ function ChatPage() {
     setInput("");
     setTyping(true);
 
-    // Persist user message
     save({ data: { threadId, role: "user", content: text } }).catch(() => {});
 
     try {
       const history = [...messages, userMsg]
-        .filter((m) => !m.id.startsWith("w") && !m.id.startsWith("sys"))
+        .filter((m) => !m.id.startsWith("w") && !m.id.startsWith("sys") && !m.id.startsWith("img"))
         .map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text }));
 
       const { data: sessionData } = await supabase.auth.getSession();
@@ -201,10 +348,7 @@ function ChatPage() {
       }
       const resp = await fetch("/api/public/chat", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ messages: history, mode }),
       });
 
@@ -259,6 +403,58 @@ function ChatPage() {
     }
   };
 
+  // ---------- Avatar upload ----------
+  const onAvatarChosen = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("Please choose an image."); return; }
+    if (file.size > 2_000_000) { toast.error("Max 2MB."); return; }
+    setUploadingAvatar(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const ext = (file.name.split(".").pop() ?? "png").toLowerCase();
+      const path = `${uid}/avatar.${ext}`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, {
+        cacheControl: "3600", upsert: true, contentType: file.type,
+      });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+      const url = `${pub.publicUrl}?v=${Date.now()}`;
+      await avatarFn({ data: { avatar_url: url } });
+      setProfile((p) => ({ username: p?.username ?? null, avatar_url: url }));
+      toast.success("Avatar updated ✨");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setUploadingAvatar(true);
+    try {
+      await avatarFn({ data: { avatar_url: null } });
+      setProfile((p) => ({ username: p?.username ?? null, avatar_url: null }));
+      toast.success("Avatar removed");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const initial = (profile?.username ?? "U").slice(0, 1).toUpperCase();
+  const UserAvatar = ({ size = 32 }: { size?: number }) =>
+    profile?.avatar_url ? (
+      <img src={profile.avatar_url} alt="" className="rounded-full object-cover shrink-0"
+        style={{ width: size, height: size }} />
+    ) : (
+      <div className="rounded-full grid place-items-center text-white font-bold shrink-0"
+        style={{ width: size, height: size, background: "var(--gradient-neon)", fontSize: size * 0.42 }}>
+        {initial}
+      </div>
+    );
 
   return (
     <div className={`relative min-h-screen flex flex-col mode-${mode} transition-colors duration-500`}>
@@ -266,7 +462,7 @@ function ChatPage() {
 
       {/* Top bar */}
       <header className="sticky top-0 z-40 px-3 sm:px-4 pt-3">
-        <div className="glass rounded-2xl px-3 sm:px-4 py-2.5 flex items-center justify-between">
+        <div className="glass rounded-2xl px-3 sm:px-4 py-2.5 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <button className="md:hidden h-9 w-9 grid place-items-center rounded-xl glass" onClick={() => setSidebar(!sidebar)}>
               <Menu className="h-4 w-4" />
@@ -299,13 +495,20 @@ function ChatPage() {
               );
             })}
           </div>
-          <div className="md:hidden">
-            <select value={mode} onChange={(e) => switchMode(e.target.value as Mode)}
-              className="glass rounded-full px-3 py-1.5 text-xs font-semibold bg-transparent outline-none">
-              {MODES.map((m) => (
-                <option key={m.id} value={m.id} className="bg-background">{m.emoji} {m.label}</option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2">
+            <div className="md:hidden">
+              <select value={mode} onChange={(e) => switchMode(e.target.value as Mode)}
+                className="glass rounded-full px-3 py-1.5 text-xs font-semibold bg-transparent outline-none">
+                {MODES.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-background">{m.emoji} {m.label}</option>
+                ))}
+              </select>
+            </div>
+            <button onClick={() => setProfileOpen(true)}
+              className="rounded-full ring-2 ring-white/10 hover:ring-white/30 transition"
+              title="Profile">
+              <UserAvatar size={34} />
+            </button>
           </div>
         </div>
       </header>
@@ -344,7 +547,6 @@ function ChatPage() {
           </div>
         </aside>
 
-
         {/* Conversation */}
         <section className="glass rounded-2xl flex flex-col min-h-0 gradient-border">
           <div ref={scroller} className="flex-1 overflow-auto scrollbar-thin p-4 sm:p-6 space-y-4">
@@ -359,16 +561,21 @@ function ChatPage() {
                     </div>
                   )}
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                    m.role === 'user'
-                      ? 'rounded-tr-sm text-white'
-                      : 'glass rounded-tl-sm'
+                    m.role === 'user' ? 'rounded-tr-sm text-white' : 'glass rounded-tl-sm'
                   }`} style={m.role === 'user' ? { background: 'var(--gradient-neon)' } : undefined}>
+                    {m.image && (
+                      <img
+                        src={m.image}
+                        alt="Generated"
+                        className={`rounded-xl mb-2 max-w-full transition-[filter] duration-300 ${m.imageLoading ? 'blur-lg' : 'blur-0'}`}
+                      />
+                    )}
                     {m.role === 'ai' ? (
                       m.text ? (
                         <div className="prose prose-invert prose-sm max-w-none prose-p:my-2 prose-pre:my-2 prose-pre:bg-black/40 prose-code:text-white">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
                         </div>
-                      ) : (
+                      ) : m.image ? null : (
                         <div className="flex items-center gap-1.5 py-1">
                           <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" />
                           <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.15s' }} />
@@ -376,9 +583,10 @@ function ChatPage() {
                         </div>
                       )
                     ) : (
-                      m.text
+                      <span className="whitespace-pre-wrap break-words">{m.text}</span>
                     )}
                   </div>
+                  {m.role === 'user' && <UserAvatar size={32} />}
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -386,15 +594,53 @@ function ChatPage() {
 
           {/* Input */}
           <div className="p-3 sm:p-4 border-t border-white/10">
-            <div className="glass rounded-2xl flex items-center gap-2 p-2 gradient-border focus-within:neon-glow transition">
+            {imageMode && (
+              <div className="mb-2 text-xs flex items-center gap-2 text-fuchsia-300">
+                <ImageIcon className="h-3.5 w-3.5" /> Image mode — Enter to generate. <button
+                  onClick={() => setImageMode(false)} className="underline hover:text-white">cancel</button>
+              </div>
+            )}
+            <div className="glass rounded-2xl flex items-end gap-2 p-2 gradient-border focus-within:neon-glow transition">
+              <button
+                onClick={onAttachClick}
+                title="Attach code/text file"
+                className="h-10 w-10 rounded-xl grid place-items-center text-muted-foreground hover:text-white hover:bg-white/10 shrink-0"
+              >
+                <Paperclip className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setImageMode((v) => !v)}
+                title="Generate an image"
+                className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 transition ${
+                  imageMode ? 'text-white neon-glow' : 'text-muted-foreground hover:text-white hover:bg-white/10'
+                }`}
+                style={imageMode ? { background: 'var(--gradient-neon)' } : undefined}
+              >
+                <ImageIcon className="h-4 w-4" />
+              </button>
               <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept=".txt,.md,.json,.yaml,.yml,.toml,.xml,.csv,.tsv,.log,.env,.html,.htm,.css,.scss,.sass,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sh,.bash,.zsh,.sql,.prisma,.graphql,.gql,.vue,.svelte,.astro,text/*,application/json"
+                className="hidden"
+                onChange={onFilesChosen}
+              />
+              <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder="Message OrbitIntelligence… (Enter to send · ⌘K new)"
-                className="flex-1 bg-transparent px-3 py-2.5 outline-none text-sm placeholder:text-muted-foreground"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+                }}
+                placeholder={imageMode
+                  ? "Describe the image… (Enter to generate · Shift+Enter for new line)"
+                  : "Message OrbitIntelligence… (Enter to send · Shift+Enter new line · ⌘K new chat)"}
+                rows={1}
+                className="flex-1 bg-transparent px-2 py-2.5 outline-none text-sm placeholder:text-muted-foreground resize-none max-h-[180px] scrollbar-thin"
               />
-              <button onClick={send} className="h-10 w-10 rounded-xl grid place-items-center text-white hover:scale-105 transition neon-glow"
+              <button onClick={send} disabled={typing}
+                className="h-10 w-10 rounded-xl grid place-items-center text-white hover:scale-105 transition neon-glow disabled:opacity-50 disabled:hover:scale-100 shrink-0"
                 style={{ background: 'var(--gradient-neon)' }}>
                 <Send className="h-4 w-4" />
               </button>
@@ -405,6 +651,65 @@ function ChatPage() {
           </div>
         </section>
       </div>
+
+      {/* Profile modal */}
+      <AnimatePresence>
+        {profileOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setProfileOpen(false)}>
+            <motion.div
+              initial={{ scale: 0.92, y: 12 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass gradient-border rounded-3xl p-6 sm:p-8 max-w-sm w-full relative"
+            >
+              <button onClick={() => setProfileOpen(false)}
+                className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-white/10">
+                <X className="h-4 w-4" />
+              </button>
+              <h2 className="text-xl font-bold gradient-text mb-4 flex items-center gap-2">
+                <UserIcon className="h-5 w-5" /> Your profile
+              </h2>
+
+              <div className="flex flex-col items-center gap-3 mb-6">
+                <div className="relative">
+                  <UserAvatar size={96} />
+                  <button
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full grid place-items-center text-white neon-glow disabled:opacity-50"
+                    style={{ background: "var(--gradient-neon)" }}
+                    title="Change avatar"
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={onAvatarChosen}
+                />
+                <div className="text-sm font-semibold">{profile?.username ?? "You"}</div>
+                <div className="text-xs text-muted-foreground">
+                  Plan: <span className="gradient-text font-semibold">{plan === "plus" ? "Plus" : "Free"}</span>
+                </div>
+                {profile?.avatar_url && (
+                  <button onClick={removeAvatar} disabled={uploadingAvatar}
+                    className="text-[11px] text-muted-foreground hover:text-white underline">
+                    Remove avatar
+                  </button>
+                )}
+              </div>
+
+              <div className="text-[11px] text-muted-foreground text-center">
+                Max 2MB. PNG, JPG, WebP.
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Upgrade / Out-of-credits modal */}
       <AnimatePresence>
