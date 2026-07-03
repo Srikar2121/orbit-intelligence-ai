@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedBuildRouteImport } from './routes/_authenticated/build'
+import { Route as ApiPublicImageRouteImport } from './routes/api/public/image'
 import { Route as ApiPublicChatRouteImport } from './routes/api/public/chat'
 import { Route as AuthenticatedBuildIdRouteImport } from './routes/_authenticated/build.$id'
 
@@ -41,6 +42,11 @@ const AuthenticatedBuildRoute = AuthenticatedBuildRouteImport.update({
   path: '/build',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ApiPublicImageRoute = ApiPublicImageRouteImport.update({
+  id: '/api/public/image',
+  path: '/api/public/image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatRoute = ApiPublicChatRouteImport.update({
   id: '/api/public/chat',
   path: '/api/public/chat',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/build/$id': typeof AuthenticatedBuildIdRoute
   '/api/public/chat': typeof ApiPublicChatRoute
+  '/api/public/image': typeof ApiPublicImageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatRoute
   '/build/$id': typeof AuthenticatedBuildIdRoute
   '/api/public/chat': typeof ApiPublicChatRoute
+  '/api/public/image': typeof ApiPublicImageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/build/$id': typeof AuthenticatedBuildIdRoute
   '/api/public/chat': typeof ApiPublicChatRoute
+  '/api/public/image': typeof ApiPublicImageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -87,8 +96,16 @@ export interface FileRouteTypes {
     | '/chat'
     | '/build/$id'
     | '/api/public/chat'
+    | '/api/public/image'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/build' | '/chat' | '/build/$id' | '/api/public/chat'
+  to:
+    | '/'
+    | '/auth'
+    | '/build'
+    | '/chat'
+    | '/build/$id'
+    | '/api/public/chat'
+    | '/api/public/image'
   id:
     | '__root__'
     | '/'
@@ -98,6 +115,7 @@ export interface FileRouteTypes {
     | '/_authenticated/chat'
     | '/_authenticated/build/$id'
     | '/api/public/chat'
+    | '/api/public/image'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -105,6 +123,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiPublicChatRoute: typeof ApiPublicChatRoute
+  ApiPublicImageRoute: typeof ApiPublicImageRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -143,6 +162,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/build'
       preLoaderRoute: typeof AuthenticatedBuildRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/public/image': {
+      id: '/api/public/image'
+      path: '/api/public/image'
+      fullPath: '/api/public/image'
+      preLoaderRoute: typeof ApiPublicImageRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/chat': {
       id: '/api/public/chat'
@@ -190,6 +216,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiPublicChatRoute: ApiPublicChatRoute,
+  ApiPublicImageRoute: ApiPublicImageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

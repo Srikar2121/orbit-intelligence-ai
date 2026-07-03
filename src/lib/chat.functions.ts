@@ -106,19 +106,18 @@ export const upsertProfile = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z
       .object({
-        username: z.string().min(2).max(40),
-        birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        username: z.string().min(2).max(40).optional(),
+        birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
         avatar_url: z.string().url().optional().nullable(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("profiles").upsert({
-      id: context.userId,
-      username: data.username,
-      birth_date: data.birth_date,
-      avatar_url: data.avatar_url ?? null,
-    });
+    const patch: Record<string, unknown> = { id: context.userId };
+    if (data.username !== undefined) patch.username = data.username;
+    if (data.birth_date !== undefined) patch.birth_date = data.birth_date;
+    if (data.avatar_url !== undefined) patch.avatar_url = data.avatar_url;
+    const { error } = await context.supabase.from("profiles").upsert(patch);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
