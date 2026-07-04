@@ -500,6 +500,16 @@ function ChatPage() {
                 ))}
               </select>
             </div>
+            <button onClick={() => setGameOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 glass rounded-full px-3 py-1.5 text-xs font-semibold text-fuchsia-200 hover:text-white hover:neon-glow transition"
+              title="Play a game to earn extra chat credits">
+              <Gamepad2 className="h-3.5 w-3.5" /> Earn credits
+            </button>
+            <button onClick={() => setGameOpen(true)}
+              className="sm:hidden h-9 w-9 grid place-items-center rounded-full glass text-fuchsia-200"
+              title="Earn credits">
+              <Gamepad2 className="h-4 w-4" />
+            </button>
             <button onClick={() => setProfileOpen(true)}
               className="rounded-full ring-2 ring-white/10 hover:ring-white/30 transition"
               title="Profile">
