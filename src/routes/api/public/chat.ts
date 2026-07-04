@@ -76,18 +76,8 @@ export const Route = createFileRoute("/api/public/chat")({
           }
           const { messages, mode } = parsed;
 
-          // 3. Fast mode requires an active Plus plan (server-verified)
-          if (mode === "fast") {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("plan, plan_expires_at")
-              .eq("id", userData.user.id)
-              .maybeSingle();
-            const isPlus =
-              profile?.plan === "plus" &&
-              (!profile.plan_expires_at || new Date(profile.plan_expires_at) > new Date());
-            if (!isPlus) return jsonError("Fast mode requires a Plus plan", 403);
-          }
+
+
 
           // 4. Enforce per-model daily quota server-side
           const { data: quotaRows, error: quotaErr } = await supabase.rpc(
