@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2,
-  Rocket, Lock, X, Paperclip, Image as ImageIcon, User as UserIcon, Camera,
+  Rocket, Lock, X, Paperclip, Image as ImageIcon, User as UserIcon, Camera, Gamepad2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -11,19 +11,18 @@ import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listThreads, createThread, deleteThread, loadMessages, saveMessage,
-  consumeQuota, getPlanStatus, getProfile, updateAvatar,
+  consumeQuota, getPlanStatus, getProfile, updateAvatar, awardGameCredits,
 } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 
-type Mode = "default" | "genz" | "codey" | "fast";
+type Mode = "default" | "genz" | "codey";
 
-const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string; plus?: boolean }[] = [
+const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[] = [
   { id: "default", label: "Default", sub: "for the nerds", icon: Brain, emoji: "🧠" },
   { id: "genz", label: "Gen-Z", sub: "for humans", icon: Zap, emoji: "✨" },
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
-  { id: "fast", label: "Fast", sub: "Plus · faster thinking", icon: Rocket, emoji: "⚡", plus: true },
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
@@ -48,7 +47,7 @@ const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm OrbitIntelligenceAI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
   genz: "hey 💜 orbit here in Gen-Z mode — casual but actually useful. what are we figuring out?",
   codey: "OrbitIntelligence online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
-  fast: "⚡ Fast mode online — Plus-tier reasoning at high speed. What do you want to crush?",
+  
 };
 
 type Thread = { id: string; title: string; mode: string; updated_at: string };
@@ -82,6 +81,8 @@ function ChatPage() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [imageMode, setImageMode] = useState(false);
+  const [gameOpen, setGameOpen] = useState(false);
+  const awardFn = useServerFn(awardGameCredits);
   const scroller = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -148,11 +149,6 @@ function ChatPage() {
   };
 
   const switchMode = (m: Mode) => {
-    if (m === "fast" && plan !== "plus") {
-      setUpgradeReason({ kind: "feature" });
-      setUpgradeOpen(true);
-      return;
-    }
     setMode(m);
     setMessages((prev) => [
       ...prev,
@@ -316,7 +312,7 @@ function ChatPage() {
     let threadId = activeId;
     if (!threadId) {
       try {
-        const t = (await create({ data: { title: text.slice(0, 60), mode: mode === "fast" ? "default" : mode } })) as Thread;
+        const t = (await create({ data: { title: text.slice(0, 60), mode } })) as Thread;
         threadId = t.id;
         setActiveId(t.id);
         setThreads((prev) => [t, ...prev]);
@@ -457,7 +453,7 @@ function ChatPage() {
     );
 
   return (
-    <div className={`relative min-h-screen flex flex-col mode-${mode} transition-colors duration-500`}>
+    <div className={`relative h-screen overflow-hidden flex flex-col mode-${mode} transition-colors duration-500`}>
       <Blobs variant={mode} />
 
       {/* Top bar */}
@@ -504,6 +500,16 @@ function ChatPage() {
                 ))}
               </select>
             </div>
+            <button onClick={() => setGameOpen(true)}
+              className="hidden sm:flex items-center gap-1.5 glass rounded-full px-3 py-1.5 text-xs font-semibold text-fuchsia-200 hover:text-white hover:neon-glow transition"
+              title="Play a game to earn extra chat credits">
+              <Gamepad2 className="h-3.5 w-3.5" /> Earn credits
+            </button>
+            <button onClick={() => setGameOpen(true)}
+              className="sm:hidden h-9 w-9 grid place-items-center rounded-full glass text-fuchsia-200"
+              title="Earn credits">
+              <Gamepad2 className="h-4 w-4" />
+            </button>
             <button onClick={() => setProfileOpen(true)}
               className="rounded-full ring-2 ring-white/10 hover:ring-white/30 transition"
               title="Profile">
@@ -766,6 +772,141 @@ function ChatPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <GameModal
+        open={gameOpen}
+        onClose={() => setGameOpen(false)}
+        mode={mode}
+        onReward={async (credits) => {
+          try {
+            const r = await awardFn({ data: { model: mode, credits } });
+            toast.success(`+${credits} ${MODES.find((x) => x.id === mode)?.label} credits! (${r.remaining}/${r.quota} left today)`);
+          } catch (e: any) {
+            toast.error(e?.message ?? "Couldn't award credits.");
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function GameModal({
+  open, onClose, mode, onReward,
+}: {
+  open: boolean;
+  onClose: () => void;
+  mode: Mode;
+  onReward: (credits: number) => void | Promise<void>;
+}) {
+  const [phase, setPhase] = useState<"idle" | "playing" | "done">("idle");
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(12);
+  const [pos, setPos] = useState({ x: 50, y: 50 });
+  const [awarded, setAwarded] = useState(0);
+
+  useEffect(() => {
+    if (!open) {
+      setPhase("idle");
+      setScore(0);
+      setTimeLeft(12);
+      setAwarded(0);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (phase !== "playing") return;
+    if (timeLeft <= 0) {
+      const credits = Math.min(5, Math.max(1, Math.floor(score / 6)));
+      setAwarded(credits);
+      setPhase("done");
+      onReward(credits);
+      return;
+    }
+    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, timeLeft, score, onReward]);
+
+  const start = () => {
+    setScore(0);
+    setTimeLeft(12);
+    setPos({ x: 50, y: 50 });
+    setPhase("playing");
+  };
+
+  const hit = () => {
+    if (phase !== "playing") return;
+    setScore((s) => s + 1);
+    setPos({ x: 10 + Math.random() * 80, y: 15 + Math.random() * 70 });
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass gradient-border rounded-3xl p-6 max-w-md w-full relative">
+        <button onClick={onClose}
+          className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-white/10">
+          <X className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="h-10 w-10 rounded-2xl grid place-items-center neon-glow" style={{ background: "var(--gradient-neon)" }}>
+            <Gamepad2 className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold gradient-text">Sparkle Rush</h2>
+            <p className="text-[11px] text-muted-foreground">Tap the sparkle for 12s. Earn up to 5 extra <span className="font-semibold">{MODES.find((x) => x.id === mode)?.label}</span> messages.</p>
+          </div>
+        </div>
+
+        <div className="mt-4 relative h-64 rounded-2xl overflow-hidden border border-white/10"
+          style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(168,85,247,0.2), transparent 60%), #0a0a0a" }}>
+          {phase === "idle" && (
+            <div className="absolute inset-0 grid place-items-center">
+              <button onClick={start}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white neon-glow"
+                style={{ background: "var(--gradient-neon)" }}>
+                Start
+              </button>
+            </div>
+          )}
+          {phase === "playing" && (
+            <button onClick={hit}
+              className="absolute h-12 w-12 rounded-full grid place-items-center text-2xl transition-all duration-100 hover:scale-110 neon-glow"
+              style={{
+                left: `${pos.x}%`, top: `${pos.y}%`,
+                transform: "translate(-50%, -50%)",
+                background: "var(--gradient-neon)",
+              }}>
+              ✨
+            </button>
+          )}
+          {phase === "done" && (
+            <div className="absolute inset-0 grid place-items-center text-center px-4">
+              <div>
+                <div className="text-4xl mb-2">🎉</div>
+                <div className="text-lg font-bold gradient-text">+{awarded} credits</div>
+                <div className="text-xs text-muted-foreground mt-1">Scored {score} hits</div>
+                <button onClick={start}
+                  className="mt-4 px-4 py-2 rounded-xl text-xs font-semibold glass hover:bg-white/10">
+                  Play again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between text-xs">
+          <div className="glass rounded-full px-3 py-1.5 font-semibold">⏱ {timeLeft}s</div>
+          <div className="glass rounded-full px-3 py-1.5 font-semibold">✨ {score}</div>
+        </div>
+        <div className="text-[10px] text-muted-foreground text-center mt-2">
+          Every 6 hits = 1 credit · max 5 per game
+        </div>
+      </motion.div>
     </div>
   );
 }

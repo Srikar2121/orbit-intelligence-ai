@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
-type Mode = "default" | "genz" | "codey" | "fast";
+type Mode = "default" | "genz" | "codey";
 
 const SYSTEM_PROMPTS: Record<Mode, string> = {
   default:
@@ -12,15 +12,12 @@ const SYSTEM_PROMPTS: Record<Mode, string> = {
     "You are OrbitIntelligenceAI in Gen-Z mode — casual but actually useful. Keep replies friendly, lowercase-leaning, with light slang and the occasional emoji (✨💜) but ALWAYS substantive and correct. Use markdown when it helps. You were created by Srikar.",
   codey:
     "You are OrbitIntelligenceAI in Codey mode — engineer-brained, first-principles, ship-fast. Lean technical: prefer code blocks, concrete steps, big-picture systems thinking. Use markdown freely. You were created by Srikar.",
-  fast:
-    "You are OrbitIntelligenceAI in Fast mode — Plus-tier. Think quickly and decisively. Be sharp, direct, and concise while staying accurate. Use markdown when it helps. You were created by Srikar.",
 };
 
 const MODEL_FOR_MODE: Record<Mode, string> = {
   default: "google/gemini-3-flash-preview",
   genz: "google/gemini-3-flash-preview",
   codey: "google/gemini-3-flash-preview",
-  fast: "google/gemini-3.5-flash",
 };
 
 const bodySchema = z.object({
@@ -33,7 +30,7 @@ const bodySchema = z.object({
     )
     .min(1)
     .max(50),
-  mode: z.enum(["default", "genz", "codey", "fast"]),
+  mode: z.enum(["default", "genz", "codey"]),
 });
 
 function jsonError(message: string, status: number) {
@@ -79,18 +76,8 @@ export const Route = createFileRoute("/api/public/chat")({
           }
           const { messages, mode } = parsed;
 
-          // 3. Fast mode requires an active Plus plan (server-verified)
-          if (mode === "fast") {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("plan, plan_expires_at")
-              .eq("id", userData.user.id)
-              .maybeSingle();
-            const isPlus =
-              profile?.plan === "plus" &&
-              (!profile.plan_expires_at || new Date(profile.plan_expires_at) > new Date());
-            if (!isPlus) return jsonError("Fast mode requires a Plus plan", 403);
-          }
+
+
 
           // 4. Enforce per-model daily quota server-side
           const { data: quotaRows, error: quotaErr } = await supabase.rpc(
