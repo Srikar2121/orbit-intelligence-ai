@@ -310,7 +310,7 @@ function ChatPage() {
     let threadId = activeId;
     if (!threadId) {
       try {
-        const t = (await create({ data: { title: text.slice(0, 60), mode: mode === "fast" ? "default" : mode } })) as Thread;
+        const t = (await create({ data: { title: text.slice(0, 60), mode } })) as Thread;
         threadId = t.id;
         setActiveId(t.id);
         setThreads((prev) => [t, ...prev]);
