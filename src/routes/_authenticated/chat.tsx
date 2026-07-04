@@ -147,11 +147,6 @@ function ChatPage() {
   };
 
   const switchMode = (m: Mode) => {
-    if (m === "fast" && plan !== "plus") {
-      setUpgradeReason({ kind: "feature" });
-      setUpgradeOpen(true);
-      return;
-    }
     setMode(m);
     setMessages((prev) => [
       ...prev,
