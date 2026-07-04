@@ -186,6 +186,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_game_credits: {
+        Args: { _credits: number; _model: string }
+        Returns: {
+          plan: string
+          quota: number
+          remaining: number
+        }[]
+      }
       consume_chat_quota: {
         Args: { _model: string }
         Returns: {
