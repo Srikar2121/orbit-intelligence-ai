@@ -138,7 +138,7 @@ export const updateAvatar = createServerFn({ method: "POST" })
 export const consumeQuota = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ model: z.enum(["default", "genz", "codey", "fast"]) }).parse(d),
+    z.object({ model: z.enum(["default", "genz", "codey"]) }).parse(d),
   )
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase.rpc("consume_chat_quota", { _model: data.model });
