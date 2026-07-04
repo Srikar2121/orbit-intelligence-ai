@@ -11,19 +11,18 @@ import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listThreads, createThread, deleteThread, loadMessages, saveMessage,
-  consumeQuota, getPlanStatus, getProfile, updateAvatar,
+  consumeQuota, getPlanStatus, getProfile, updateAvatar, awardGameCredits,
 } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 
-type Mode = "default" | "genz" | "codey" | "fast";
+type Mode = "default" | "genz" | "codey";
 
-const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string; plus?: boolean }[] = [
+const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[] = [
   { id: "default", label: "Default", sub: "for the nerds", icon: Brain, emoji: "🧠" },
   { id: "genz", label: "Gen-Z", sub: "for humans", icon: Zap, emoji: "✨" },
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
-  { id: "fast", label: "Fast", sub: "Plus · faster thinking", icon: Rocket, emoji: "⚡", plus: true },
 ];
 
 export const Route = createFileRoute("/_authenticated/chat")({
