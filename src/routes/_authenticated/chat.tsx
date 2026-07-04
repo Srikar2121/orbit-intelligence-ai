@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2,
-  Rocket, Lock, X, Paperclip, Image as ImageIcon, User as UserIcon, Camera,
+  Rocket, Lock, X, Paperclip, Image as ImageIcon, User as UserIcon, Camera, Gamepad2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
