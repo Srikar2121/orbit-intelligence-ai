@@ -81,6 +81,8 @@ function ChatPage() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [imageMode, setImageMode] = useState(false);
+  const [gameOpen, setGameOpen] = useState(false);
+  const awardFn = useServerFn(awardGameCredits);
   const scroller = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
