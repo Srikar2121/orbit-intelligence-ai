@@ -772,6 +772,141 @@ function ChatPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <GameModal
+        open={gameOpen}
+        onClose={() => setGameOpen(false)}
+        mode={mode}
+        onReward={async (credits) => {
+          try {
+            const r = await awardFn({ data: { model: mode, credits } });
+            toast.success(`+${credits} ${MODES.find((x) => x.id === mode)?.label} credits! (${r.remaining}/${r.quota} left today)`);
+          } catch (e: any) {
+            toast.error(e?.message ?? "Couldn't award credits.");
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function GameModal({
+  open, onClose, mode, onReward,
+}: {
+  open: boolean;
+  onClose: () => void;
+  mode: Mode;
+  onReward: (credits: number) => void | Promise<void>;
+}) {
+  const [phase, setPhase] = useState<"idle" | "playing" | "done">("idle");
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(12);
+  const [pos, setPos] = useState({ x: 50, y: 50 });
+  const [awarded, setAwarded] = useState(0);
+
+  useEffect(() => {
+    if (!open) {
+      setPhase("idle");
+      setScore(0);
+      setTimeLeft(12);
+      setAwarded(0);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (phase !== "playing") return;
+    if (timeLeft <= 0) {
+      const credits = Math.min(5, Math.max(1, Math.floor(score / 6)));
+      setAwarded(credits);
+      setPhase("done");
+      onReward(credits);
+      return;
+    }
+    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [phase, timeLeft, score, onReward]);
+
+  const start = () => {
+    setScore(0);
+    setTimeLeft(12);
+    setPos({ x: 50, y: 50 });
+    setPhase("playing");
+  };
+
+  const hit = () => {
+    if (phase !== "playing") return;
+    setScore((s) => s + 1);
+    setPos({ x: 10 + Math.random() * 80, y: 15 + Math.random() * 70 });
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}>
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        onClick={(e) => e.stopPropagation()}
+        className="glass gradient-border rounded-3xl p-6 max-w-md w-full relative">
+        <button onClick={onClose}
+          className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-white/10">
+          <X className="h-4 w-4" />
+        </button>
+        <div className="flex items-center gap-2 mb-1">
+          <div className="h-10 w-10 rounded-2xl grid place-items-center neon-glow" style={{ background: "var(--gradient-neon)" }}>
+            <Gamepad2 className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold gradient-text">Sparkle Rush</h2>
+            <p className="text-[11px] text-muted-foreground">Tap the sparkle for 12s. Earn up to 5 extra <span className="font-semibold">{MODES.find((x) => x.id === mode)?.label}</span> messages.</p>
+          </div>
+        </div>
+
+        <div className="mt-4 relative h-64 rounded-2xl overflow-hidden border border-white/10"
+          style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(168,85,247,0.2), transparent 60%), #0a0a0a" }}>
+          {phase === "idle" && (
+            <div className="absolute inset-0 grid place-items-center">
+              <button onClick={start}
+                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white neon-glow"
+                style={{ background: "var(--gradient-neon)" }}>
+                Start
+              </button>
+            </div>
+          )}
+          {phase === "playing" && (
+            <button onClick={hit}
+              className="absolute h-12 w-12 rounded-full grid place-items-center text-2xl transition-all duration-100 hover:scale-110 neon-glow"
+              style={{
+                left: `${pos.x}%`, top: `${pos.y}%`,
+                transform: "translate(-50%, -50%)",
+                background: "var(--gradient-neon)",
+              }}>
+              ✨
+            </button>
+          )}
+          {phase === "done" && (
+            <div className="absolute inset-0 grid place-items-center text-center px-4">
+              <div>
+                <div className="text-4xl mb-2">🎉</div>
+                <div className="text-lg font-bold gradient-text">+{awarded} credits</div>
+                <div className="text-xs text-muted-foreground mt-1">Scored {score} hits</div>
+                <button onClick={start}
+                  className="mt-4 px-4 py-2 rounded-xl text-xs font-semibold glass hover:bg-white/10">
+                  Play again
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-3 flex items-center justify-between text-xs">
+          <div className="glass rounded-full px-3 py-1.5 font-semibold">⏱ {timeLeft}s</div>
+          <div className="glass rounded-full px-3 py-1.5 font-semibold">✨ {score}</div>
+        </div>
+        <div className="text-[10px] text-muted-foreground text-center mt-2">
+          Every 6 hits = 1 credit · max 5 per game
+        </div>
+      </motion.div>
     </div>
   );
 }
