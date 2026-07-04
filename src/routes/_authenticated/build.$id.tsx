@@ -428,20 +428,20 @@ createRoot(document.getElementById('root')).render(<App/>);
         <aside className="w-[440px] shrink-0 flex flex-col border-l border-zinc-800 bg-zinc-950">
           <div className="flex border-b border-zinc-800 text-xs">
             <button
-              onClick={() => setRightTab("preview")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 transition ${
-                rightTab === "preview" ? "bg-zinc-900 text-emerald-300 border-b-2 border-emerald-500" : "text-zinc-500 hover:text-zinc-200"
+              onClick={() => setRightTab("chat")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 font-semibold transition ${
+                rightTab === "chat" ? "bg-zinc-900 text-emerald-300 border-b-2 border-emerald-500" : "text-zinc-400 hover:text-zinc-100"
               }`}
             >
-              <Play className="h-3 w-3" /> live preview
+              <MessageSquare className="h-3.5 w-3.5" /> AI Chat Builder
             </button>
             <button
-              onClick={() => setRightTab("chat")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 transition ${
-                rightTab === "chat" ? "bg-zinc-900 text-emerald-300 border-b-2 border-emerald-500" : "text-zinc-500 hover:text-zinc-200"
+              onClick={() => setRightTab("preview")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-3 font-semibold transition ${
+                rightTab === "preview" ? "bg-zinc-900 text-emerald-300 border-b-2 border-emerald-500" : "text-zinc-400 hover:text-zinc-100"
               }`}
             >
-              <MessageSquare className="h-3 w-3" /> chat builder
+              <Play className="h-3.5 w-3.5" /> Live Preview
             </button>
           </div>
 
