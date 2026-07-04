@@ -451,7 +451,7 @@ function ChatPage() {
     );
 
   return (
-    <div className={`relative min-h-screen flex flex-col mode-${mode} transition-colors duration-500`}>
+    <div className={`relative h-screen overflow-hidden flex flex-col mode-${mode} transition-colors duration-500`}>
       <Blobs variant={mode} />
 
       {/* Top bar */}
