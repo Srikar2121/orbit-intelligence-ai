@@ -163,3 +163,23 @@ export const getPlanStatus = createServerFn({ method: "GET" })
       usage: (usage ?? []) as { model: string; count: number }[],
     };
   });
+
+export const awardGameCredits = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        model: z.enum(["default", "genz", "codey"]),
+        credits: z.number().int().min(1).max(5),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase.rpc("award_game_credits", {
+      _model: data.model,
+      _credits: data.credits,
+    });
+    if (error) throw new Error(error.message);
+    const row = Array.isArray(rows) ? rows[0] : rows;
+    return row as { remaining: number; quota: number; plan: string };
+  });
