@@ -70,7 +70,7 @@ function Editor() {
   const [lastDeployUrl, setLastDeployUrl] = useState<string | null>(null);
   const [vercelConnected, setVercelConnected] = useState(false);
 
-  const [rightTab, setRightTab] = useState<RightTab>("preview");
+  const [rightTab, setRightTab] = useState<RightTab>("chat");
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([
     { role: "assistant", content: "Hey! Tell me what site or page you want to build and I'll write the code." },
   ]);
