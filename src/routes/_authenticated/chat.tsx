@@ -299,8 +299,7 @@ function ChatPage() {
     try {
       const q = await consume({ data: { model: mode } });
       if (!q.allowed) {
-        setUpgradeReason({ kind: "limit", model: mode, quota: q.quota });
-        setUpgradeOpen(true);
+        setGameOpen(true);
         return;
       }
       setPlan(q.plan === "plus" ? "plus" : "free");
