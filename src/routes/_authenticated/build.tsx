@@ -156,7 +156,7 @@ function BuildHome() {
       </header>
 
       <main className="relative mx-auto max-w-6xl px-6 py-12">
-        <div className="mb-10">
+        <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight text-zinc-50">
             $ projects<span className="animate-pulse text-emerald-400">_</span>
           </h1>
@@ -164,6 +164,47 @@ function BuildHome() {
             Write code. Generate with AI. Ship to Vercel in one click.
           </p>
         </div>
+
+        {/* Capabilities strip — new IDE features */}
+        <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: "◈", title: "Multi-file AI edits", desc: "AI edits across your whole tree in one turn." },
+            { icon: "▶", title: "Live preview", desc: "Sandpack hot-reload as you type." },
+            { icon: "◆", title: "Starter templates", desc: "Kick off from a template below." },
+            { icon: "↗", title: "One-click deploy", desc: "Ship to Vercel from the sidebar." },
+          ].map((c) => (
+            <div key={c.title} className="rounded-lg border border-zinc-800 bg-zinc-900/40 p-3">
+              <div className="flex items-center gap-2 text-emerald-400 text-sm font-semibold">
+                <span>{c.icon}</span>
+                <span className="text-zinc-100">{c.title}</span>
+              </div>
+              <p className="mt-1 text-xs text-zinc-500">{c.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Starter templates */}
+        <div className="mb-8">
+          <div className="mb-2 text-xs uppercase tracking-wider text-zinc-500">start from a template</div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { name: "landing-page", label: "Landing page" },
+              { name: "portfolio-site", label: "Portfolio" },
+              { name: "saas-dashboard", label: "SaaS dashboard" },
+              { name: "blog-starter", label: "Blog" },
+              { name: "todo-app", label: "Todo app" },
+            ].map((t) => (
+              <button
+                key={t.name}
+                onClick={() => { setNewName(t.name); setCreating(true); }}
+                className="rounded-md border border-zinc-800 bg-zinc-900/40 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-emerald-700 hover:text-emerald-300"
+              >
+                + {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
 
         <div className="mb-6">
           {creating ? (
