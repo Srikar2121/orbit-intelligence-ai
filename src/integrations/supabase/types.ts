@@ -203,6 +203,7 @@ export type Database = {
           used: number
         }[]
       }
+      is_unlimited_user: { Args: { _uid: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
