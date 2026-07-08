@@ -42,7 +42,7 @@ function Index() {
         <Hero />
         <Features />
         <ChatPreview />
-        <Testimonials />
+        
       </main>
       <Footer />
       <Onboarding />
