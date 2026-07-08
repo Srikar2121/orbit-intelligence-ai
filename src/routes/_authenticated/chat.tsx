@@ -46,7 +46,7 @@ type Msg = {
 const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm OrbitIntelligenceAI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
   genz: "hey 💜 orbit here in Gen-Z mode — casual but actually useful. what are we figuring out?",
-  codey: "OrbitIntelligence online. Codey mode engaged. Think bigger. Ship faster. What are we building? 🚀",
+  codey: "OrbitIntelligence online. Codey mode — your lightweight coding buddy. Snippets, fixes, quick explains. Need a full app? Head to Build Mode 🚀",
   
 };
 
@@ -799,23 +799,28 @@ function GameModal({
 }) {
   const [phase, setPhase] = useState<"idle" | "playing" | "done">("idle");
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(12);
-  const [pos, setPos] = useState({ x: 50, y: 50 });
+  const [timeLeft, setTimeLeft] = useState(20);
+  const [ballX, setBallX] = useState(100); // percent from left
+  const [flash, setFlash] = useState<null | "six" | "four" | "one" | "out">(null);
   const [awarded, setAwarded] = useState(0);
+  const rafRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (!open) {
       setPhase("idle");
       setScore(0);
-      setTimeLeft(12);
+      setTimeLeft(20);
       setAwarded(0);
+      setFlash(null);
     }
   }, [open]);
 
+  // countdown
   useEffect(() => {
     if (phase !== "playing") return;
     if (timeLeft <= 0) {
-      const credits = Math.min(5, Math.max(1, Math.floor(score / 6)));
+      const credits = Math.min(5, Math.max(1, Math.floor(score / 8)));
       setAwarded(credits);
       setPhase("done");
       onReward(credits);
@@ -825,17 +830,54 @@ function GameModal({
     return () => clearTimeout(t);
   }, [phase, timeLeft, score, onReward]);
 
+  // ball animation loop
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const bowl = () => {
+      startTimeRef.current = performance.now();
+      const duration = 1400 + Math.random() * 600; // ball travel time
+      const step = (now: number) => {
+        const t = (now - startTimeRef.current) / duration;
+        if (t >= 1) {
+          setBallX(0);
+          setTimeout(bowl, 500);
+          return;
+        }
+        setBallX(100 - t * 100);
+        rafRef.current = requestAnimationFrame(step);
+      };
+      rafRef.current = requestAnimationFrame(step);
+    };
+    bowl();
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, [phase]);
+
   const start = () => {
     setScore(0);
-    setTimeLeft(12);
-    setPos({ x: 50, y: 50 });
+    setTimeLeft(20);
+    setBallX(100);
+    setFlash(null);
     setPhase("playing");
   };
 
-  const hit = () => {
+  const swing = () => {
     if (phase !== "playing") return;
-    setScore((s) => s + 1);
-    setPos({ x: 10 + Math.random() * 80, y: 15 + Math.random() * 70 });
+    // batsman is around x=15%. Timing window based on ballX.
+    let runs = 0;
+    let kind: "six" | "four" | "one" | "out" = "out";
+    if (ballX >= 10 && ballX <= 20) { runs = 6; kind = "six"; }
+    else if (ballX >= 6 && ballX <= 26) { runs = 4; kind = "four"; }
+    else if (ballX >= 2 && ballX <= 34) { runs = 1; kind = "one"; }
+    else { runs = 0; kind = "out"; }
+    setScore((s) => s + runs);
+    setFlash(kind);
+    setTimeout(() => setFlash(null), 500);
+    // reset ball so it re-bowls
+    setBallX(0);
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setTimeout(() => setBallX(100), 200);
   };
 
   if (!open) return null;
@@ -852,43 +894,69 @@ function GameModal({
           <X className="h-4 w-4" />
         </button>
         <div className="flex items-center gap-2 mb-1">
-          <div className="h-10 w-10 rounded-2xl grid place-items-center neon-glow" style={{ background: "var(--gradient-neon)" }}>
-            <Gamepad2 className="h-5 w-5 text-white" />
+          <div className="h-10 w-10 rounded-2xl grid place-items-center neon-glow text-xl" style={{ background: "var(--gradient-neon)" }}>
+            🏏
           </div>
           <div>
-            <h2 className="text-lg font-bold gradient-text">Sparkle Rush</h2>
-            <p className="text-[11px] text-muted-foreground">Tap the sparkle for 12s. Earn up to 5 extra <span className="font-semibold">{MODES.find((x) => x.id === mode)?.label}</span> messages.</p>
+            <h2 className="text-lg font-bold gradient-text">Orbit Cricket</h2>
+            <p className="text-[11px] text-muted-foreground">Tap SWING when the ball reaches the batsman. 20s over. Earn up to 5 extra <span className="font-semibold">{MODES.find((x) => x.id === mode)?.label}</span> messages.</p>
           </div>
         </div>
 
         <div className="mt-4 relative h-64 rounded-2xl overflow-hidden border border-white/10"
-          style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(168,85,247,0.2), transparent 60%), #0a0a0a" }}>
+          style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(34,197,94,0.25), transparent 60%), linear-gradient(180deg, #052e16 0%, #0a0a0a 100%)" }}>
+          {/* pitch */}
+          <div className="absolute left-[10%] right-[10%] top-1/2 -translate-y-1/2 h-14 rounded-md bg-yellow-200/10 border border-yellow-200/20" />
+          {/* stumps */}
+          <div className="absolute left-[6%] top-1/2 -translate-y-1/2 flex gap-0.5">
+            <div className="h-10 w-0.5 bg-white/80" />
+            <div className="h-10 w-0.5 bg-white/80" />
+            <div className="h-10 w-0.5 bg-white/80" />
+          </div>
+
           {phase === "idle" && (
             <div className="absolute inset-0 grid place-items-center">
               <button onClick={start}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white neon-glow"
                 style={{ background: "var(--gradient-neon)" }}>
-                Start
+                Start Over
               </button>
             </div>
           )}
+
           {phase === "playing" && (
-            <button onClick={hit}
-              className="absolute h-12 w-12 rounded-full grid place-items-center text-2xl transition-all duration-100 hover:scale-110 neon-glow"
-              style={{
-                left: `${pos.x}%`, top: `${pos.y}%`,
-                transform: "translate(-50%, -50%)",
-                background: "var(--gradient-neon)",
-              }}>
-              ✨
-            </button>
+            <>
+              {/* batsman */}
+              <div className="absolute left-[14%] top-1/2 -translate-y-1/2 text-3xl select-none">🏏</div>
+              {/* ball */}
+              <div
+                className="absolute top-1/2 h-4 w-4 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"
+                style={{ left: `${ballX}%`, transform: "translate(-50%, -50%)" }}
+              />
+              {/* swing button */}
+              <button
+                onClick={swing}
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full text-sm font-bold text-white neon-glow active:scale-95"
+                style={{ background: "var(--gradient-neon)" }}>
+                SWING
+              </button>
+              {/* flash */}
+              {flash && (
+                <div className="absolute inset-0 grid place-items-center pointer-events-none">
+                  <div className={`text-5xl font-black ${flash === "out" ? "text-red-400" : "text-yellow-300"} drop-shadow-lg`}>
+                    {flash === "six" ? "SIX! +6" : flash === "four" ? "FOUR! +4" : flash === "one" ? "+1" : "MISS"}
+                  </div>
+                </div>
+              )}
+            </>
           )}
+
           {phase === "done" && (
             <div className="absolute inset-0 grid place-items-center text-center px-4">
               <div>
-                <div className="text-4xl mb-2">🎉</div>
+                <div className="text-4xl mb-2">🏆</div>
                 <div className="text-lg font-bold gradient-text">+{awarded} credits</div>
-                <div className="text-xs text-muted-foreground mt-1">Scored {score} hits</div>
+                <div className="text-xs text-muted-foreground mt-1">Scored {score} runs</div>
                 <button onClick={start}
                   className="mt-4 px-4 py-2 rounded-xl text-xs font-semibold glass hover:bg-white/10">
                   Play again
@@ -900,10 +968,10 @@ function GameModal({
 
         <div className="mt-3 flex items-center justify-between text-xs">
           <div className="glass rounded-full px-3 py-1.5 font-semibold">⏱ {timeLeft}s</div>
-          <div className="glass rounded-full px-3 py-1.5 font-semibold">✨ {score}</div>
+          <div className="glass rounded-full px-3 py-1.5 font-semibold">🏏 {score} runs</div>
         </div>
         <div className="text-[10px] text-muted-foreground text-center mt-2">
-          Every 6 hits = 1 credit · max 5 per game
+          Every 8 runs = 1 credit · max 5 per over
         </div>
       </motion.div>
     </div>
