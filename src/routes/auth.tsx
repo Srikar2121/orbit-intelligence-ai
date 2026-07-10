@@ -15,8 +15,15 @@ export const Route = createFileRoute("/auth")({
       { name: "description", content: "Sign in or create your OrbitIntelligenceAI account." },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : "",
+  }),
   component: AuthPage,
 });
+
+function safeNext(next: string, fallback: string): string {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+}
 
 function ageFrom(date: string): number {
   const d = new Date(date);
@@ -26,6 +33,8 @@ function ageFrom(date: string): number {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const dest = safeNext(next, "/chat");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,9 +45,9 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/chat" });
+      if (data.user) window.location.href = dest;
     });
-  }, [navigate]);
+  }, [dest]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,13 +68,13 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/chat` },
+          options: { emailRedirectTo: `${window.location.origin}${dest}` },
         });
         if (error) throw error;
         if (data.session) {
           await save({ data: { username: username.trim(), birth_date: birth } });
           toast.success("Welcome to Orbit ✨");
-          navigate({ to: "/chat" });
+          window.location.href = dest;
         } else {
           toast.success("Check your email to confirm your account.");
         }
@@ -73,7 +82,7 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success("Welcome back 💜");
-        navigate({ to: "/chat" });
+        window.location.href = dest;
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Something went wrong.");
@@ -85,14 +94,14 @@ function AuthPage() {
   const signInGoogle = async () => {
     setBusy(true);
     const res = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}/chat`,
+      redirect_uri: `${window.location.origin}${dest}`,
     });
     if (res.error) {
       toast.error(res.error.message ?? "Google sign-in failed");
       setBusy(false);
       return;
     }
-    if (!res.redirected) navigate({ to: "/chat" });
+    if (!res.redirected) window.location.href = dest;
   };
 
   return (
