@@ -13,12 +13,12 @@ export function Hero() {
         </motion.div>
 
         <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-          className="font-display text-6xl sm:text-7xl md:text-8xl font-extrabold leading-[0.95] tracking-tight">
+          className="font-display text-[2.75rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold leading-[0.95] tracking-tight break-words">
           <span className="gradient-text">OrbitIntelligenceAI</span>
         </motion.h1>
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
-          className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
+          className="mt-6 text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
           Your thoughts. Connected. An intelligent AI companion that learns how you think,
           remembers what matters, and replies in milliseconds.
         </motion.p>
@@ -36,13 +36,13 @@ export function Hero() {
 
         {/* Glowing orb */}
         <motion.div initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5, duration: 1 }}
-          className="relative mt-20 mx-auto h-64 w-64 sm:h-80 sm:w-80">
+          className="relative mt-16 sm:mt-20 mx-auto h-44 w-44 sm:h-72 sm:w-72 md:h-80 md:w-80">
           <div className="absolute inset-0 rounded-full animate-pulse-glow" style={{ background: 'radial-gradient(circle at 30% 30%, #c9a8ff, #7C4DFF 40%, #00E5FF 70%, #FF4D9D)' }} />
           <div className="absolute inset-6 rounded-full glass grid place-items-center">
-            <Sparkles className="h-16 w-16 text-white/90" />
+            <Sparkles className="h-10 w-10 sm:h-16 sm:w-16 text-white/90" />
           </div>
-          <div className="absolute -inset-8 rounded-full border border-white/10 animate-spin" style={{ animationDuration: '20s' }} />
-          <div className="absolute -inset-16 rounded-full border border-white/5 animate-spin" style={{ animationDuration: '40s', animationDirection: 'reverse' }} />
+          <div className="absolute -inset-6 sm:-inset-8 rounded-full border border-white/10 animate-spin" style={{ animationDuration: '20s' }} />
+          <div className="absolute -inset-12 sm:-inset-16 rounded-full border border-white/5 animate-spin" style={{ animationDuration: '40s', animationDirection: 'reverse' }} />
         </motion.div>
       </div>
     </section>
