@@ -15,8 +15,15 @@ export const Route = createFileRoute("/auth")({
       { name: "description", content: "Sign in or create your OrbitIntelligenceAI account." },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : "",
+  }),
   component: AuthPage,
 });
+
+function safeNext(next: string, fallback: string): string {
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
+}
 
 function ageFrom(date: string): number {
   const d = new Date(date);
