@@ -25,22 +25,22 @@ export function PrivacyPopup() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[200] grid place-items-center p-4 bg-black/70 backdrop-blur-md"
+          className="fixed inset-0 z-[200] grid place-items-center p-3 sm:p-4 bg-black/70 backdrop-blur-md"
         >
           <motion.div
             initial={{ scale: 0.92, y: 20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0 }}
-            className="glass gradient-border rounded-3xl p-8 max-w-lg w-full"
+            className="glass gradient-border rounded-2xl sm:rounded-3xl p-5 sm:p-8 w-full max-w-lg mx-auto"
           >
             <div className="flex items-center gap-3">
               <div
-                className="h-12 w-12 rounded-2xl grid place-items-center neon-glow"
+                className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-2xl grid place-items-center neon-glow"
                 style={{ background: "var(--gradient-neon)" }}
               >
-                <Shield className="h-6 w-6 text-white" />
+                <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <h3 className="text-2xl font-bold gradient-text">Privacy Policy</h3>
+              <h3 className="text-xl sm:text-2xl font-bold gradient-text">Privacy Policy</h3>
             </div>
 
             <div className="mt-5 space-y-3 text-sm text-muted-foreground max-h-72 overflow-y-auto pr-2">
