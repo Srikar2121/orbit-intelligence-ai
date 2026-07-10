@@ -1004,6 +1004,19 @@ createRoot(document.getElementById('root')).render(<App/>);
             </div>
           </div>
         </main>
+
+        {/* Floating "Ask Bot" quick button — always visible in build mode */}
+        <button
+          onClick={() => setActivity("chat")}
+          title="Ask the AI bot"
+          className={`fixed bottom-10 right-5 z-40 flex items-center gap-2 rounded-full px-4 py-2.5 text-xs font-semibold text-white shadow-xl transition hover:scale-105 active:scale-95 ${
+            activity === "chat" ? "opacity-40 hover:opacity-100" : ""
+          }`}
+          style={{ background: "var(--gradient-neon)" }}
+        >
+          <Sparkles className="h-4 w-4" />
+          Ask Bot
+        </button>
       </div>
 
       {/* Vercel notice */}
