@@ -789,6 +789,32 @@ function ChatPage() {
   );
 }
 
+const CRICKET_QUESTIONS: { q: string; options: string[]; answer: number }[] = [
+  { q: "How many players are on a cricket team on the field?", options: ["9", "10", "11", "12"], answer: 2 },
+  { q: "How many runs is a boundary that clears the rope on the full?", options: ["2", "4", "6", "8"], answer: 2 },
+  { q: "What is the maximum number of overs per side in a T20 match?", options: ["10", "20", "50", "40"], answer: 1 },
+  { q: "Who has the highest individual score in Test cricket?", options: ["Don Bradman", "Brian Lara", "Sachin Tendulkar", "Virat Kohli"], answer: 1 },
+  { q: "Which country won the first ICC Cricket World Cup in 1975?", options: ["Australia", "England", "West Indies", "India"], answer: 2 },
+  { q: "How many balls are bowled in a standard over?", options: ["4", "5", "6", "8"], answer: 2 },
+  { q: "What does LBW stand for?", options: ["Long Ball Wide", "Leg Before Wicket", "Left Batting Wicket", "Late Bowl Warning"], answer: 1 },
+  { q: "Who is known as 'The God of Cricket'?", options: ["MS Dhoni", "Virat Kohli", "Sachin Tendulkar", "Ricky Ponting"], answer: 2 },
+  { q: "The Ashes is played between which two countries?", options: ["India & Pakistan", "England & Australia", "SA & NZ", "WI & England"], answer: 1 },
+  { q: "How wide is a cricket pitch (approx)?", options: ["8 ft", "10 ft", "12 ft", "14 ft"], answer: 1 },
+  { q: "Who was the first bowler to take 800 Test wickets?", options: ["Shane Warne", "Anil Kumble", "Muttiah Muralitharan", "James Anderson"], answer: 2 },
+  { q: "In which year did India win its first ODI World Cup?", options: ["1975", "1983", "1992", "2011"], answer: 1 },
+];
+
+const DAILY_PLAY_LIMIT = 3;
+const playKey = () => `orbit-cricket-plays-${new Date().toISOString().slice(0, 10)}`;
+function readPlays(): number {
+  if (typeof window === "undefined") return 0;
+  return Number(localStorage.getItem(playKey()) ?? 0);
+}
+function bumpPlays() {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(playKey(), String(readPlays() + 1));
+}
+
 function GameModal({
   open, onClose, mode, onReward,
 }: {
@@ -797,181 +823,170 @@ function GameModal({
   mode: Mode;
   onReward: (credits: number) => void | Promise<void>;
 }) {
-  const [phase, setPhase] = useState<"idle" | "playing" | "done">("idle");
+  const [phase, setPhase] = useState<"idle" | "playing" | "done" | "locked">("idle");
+  const [order, setOrder] = useState<number[]>([]);
+  const [step, setStep] = useState(0);
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(20);
-  const [ballX, setBallX] = useState(100); // percent from left
-  const [flash, setFlash] = useState<null | "six" | "four" | "one" | "out">(null);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [locked, setLocked] = useState(false);
   const [awarded, setAwarded] = useState(0);
-  const rafRef = useRef<number | null>(null);
-  const startTimeRef = useRef<number>(0);
+  const [playsToday, setPlaysToday] = useState(0);
+
+  const TOTAL = 5; // questions per quiz
 
   useEffect(() => {
-    if (!open) {
-      setPhase("idle");
-      setScore(0);
-      setTimeLeft(20);
-      setAwarded(0);
-      setFlash(null);
-    }
+    if (!open) return;
+    const plays = readPlays();
+    setPlaysToday(plays);
+    setPhase(plays >= DAILY_PLAY_LIMIT ? "locked" : "idle");
+    setStep(0);
+    setScore(0);
+    setSelected(null);
+    setLocked(false);
+    setAwarded(0);
   }, [open]);
 
-  // countdown
-  useEffect(() => {
-    if (phase !== "playing") return;
-    if (timeLeft <= 0) {
-      const credits = Math.min(5, Math.max(1, Math.floor(score / 8)));
-      setAwarded(credits);
-      setPhase("done");
-      onReward(credits);
-      return;
-    }
-    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [phase, timeLeft, score, onReward]);
-
-  // ball animation loop
-  useEffect(() => {
-    if (phase !== "playing") return;
-    const bowl = () => {
-      startTimeRef.current = performance.now();
-      const duration = 1400 + Math.random() * 600; // ball travel time
-      const step = (now: number) => {
-        const t = (now - startTimeRef.current) / duration;
-        if (t >= 1) {
-          setBallX(0);
-          setTimeout(bowl, 500);
-          return;
-        }
-        setBallX(100 - t * 100);
-        rafRef.current = requestAnimationFrame(step);
-      };
-      rafRef.current = requestAnimationFrame(step);
-    };
-    bowl();
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, [phase]);
-
   const start = () => {
+    if (readPlays() >= DAILY_PLAY_LIMIT) { setPhase("locked"); return; }
+    const shuffled = [...CRICKET_QUESTIONS.keys()].sort(() => Math.random() - 0.5).slice(0, TOTAL);
+    setOrder(shuffled);
+    setStep(0);
     setScore(0);
-    setTimeLeft(20);
-    setBallX(100);
-    setFlash(null);
+    setSelected(null);
+    setLocked(false);
     setPhase("playing");
   };
 
-  const swing = () => {
-    if (phase !== "playing") return;
-    // batsman is around x=15%. Timing window based on ballX.
-    let runs = 0;
-    let kind: "six" | "four" | "one" | "out" = "out";
-    if (ballX >= 10 && ballX <= 20) { runs = 6; kind = "six"; }
-    else if (ballX >= 6 && ballX <= 26) { runs = 4; kind = "four"; }
-    else if (ballX >= 2 && ballX <= 34) { runs = 1; kind = "one"; }
-    else { runs = 0; kind = "out"; }
-    setScore((s) => s + runs);
-    setFlash(kind);
-    setTimeout(() => setFlash(null), 500);
-    // reset ball so it re-bowls
-    setBallX(0);
-    if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    setTimeout(() => setBallX(100), 200);
+  const currentQ = phase === "playing" ? CRICKET_QUESTIONS[order[step]] : null;
+
+  const pick = (idx: number) => {
+    if (locked || !currentQ) return;
+    setSelected(idx);
+    setLocked(true);
+    const correct = idx === currentQ.answer;
+    const nextScore = score + (correct ? 1 : 0);
+    setScore(nextScore);
+    setTimeout(() => {
+      if (step + 1 >= TOTAL) {
+        const credits = Math.min(5, Math.max(1, nextScore));
+        bumpPlays();
+        setPlaysToday((p) => p + 1);
+        setAwarded(credits);
+        setPhase("done");
+        if (nextScore > 0) onReward(credits);
+      } else {
+        setStep((s) => s + 1);
+        setSelected(null);
+        setLocked(false);
+      }
+    }, 900);
   };
 
   if (!open) return null;
 
+  const playsLeft = Math.max(0, DAILY_PLAY_LIMIT - playsToday);
+
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={onClose}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/70 backdrop-blur-sm p-4" onClick={onClose}>
       <motion.div
         initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
         onClick={(e) => e.stopPropagation()}
         className="glass gradient-border rounded-3xl p-6 max-w-md w-full relative">
-        <button onClick={onClose}
-          className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-white/10">
+        <button onClick={onClose} className="absolute top-3 right-3 h-8 w-8 grid place-items-center rounded-full hover:bg-white/10">
           <X className="h-4 w-4" />
         </button>
+
         <div className="flex items-center gap-2 mb-1">
           <div className="h-10 w-10 rounded-2xl grid place-items-center neon-glow text-xl" style={{ background: "var(--gradient-neon)" }}>
             🏏
           </div>
           <div>
-            <h2 className="text-lg font-bold gradient-text">Orbit Cricket</h2>
-            <p className="text-[11px] text-muted-foreground">Tap SWING when the ball reaches the batsman. 20s over. Earn up to 5 extra <span className="font-semibold">{MODES.find((x) => x.id === mode)?.label}</span> messages.</p>
+            <h2 className="text-lg font-bold gradient-text">Orbit Cricket Quiz</h2>
+            <p className="text-[11px] text-muted-foreground">
+              {TOTAL} questions · 1 point per correct answer · earn up to 5 extra <span className="font-semibold">{MODES.find((x) => x.id === mode)?.label}</span> messages.
+            </p>
           </div>
         </div>
 
-        <div className="mt-4 relative h-64 rounded-2xl overflow-hidden border border-white/10"
-          style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(34,197,94,0.25), transparent 60%), linear-gradient(180deg, #052e16 0%, #0a0a0a 100%)" }}>
-          {/* pitch */}
-          <div className="absolute left-[10%] right-[10%] top-1/2 -translate-y-1/2 h-14 rounded-md bg-yellow-200/10 border border-yellow-200/20" />
-          {/* stumps */}
-          <div className="absolute left-[6%] top-1/2 -translate-y-1/2 flex gap-0.5">
-            <div className="h-10 w-0.5 bg-white/80" />
-            <div className="h-10 w-0.5 bg-white/80" />
-            <div className="h-10 w-0.5 bg-white/80" />
-          </div>
+        <div className="mt-3 flex items-center justify-between text-[11px]">
+          <div className="glass rounded-full px-3 py-1 font-semibold">Plays left today: {playsLeft}/{DAILY_PLAY_LIMIT}</div>
+          {phase === "playing" && <div className="glass rounded-full px-3 py-1 font-semibold">Q {step + 1}/{TOTAL} · {score} pts</div>}
+        </div>
+
+        <div className="mt-4 min-h-[280px] rounded-2xl border border-white/10 p-4"
+          style={{ background: "radial-gradient(120% 120% at 50% 0%, rgba(34,197,94,0.18), transparent 60%), linear-gradient(180deg, #052e16 0%, #0a0a0a 100%)" }}>
 
           {phase === "idle" && (
-            <div className="absolute inset-0 grid place-items-center">
-              <button onClick={start}
-                className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white neon-glow"
-                style={{ background: "var(--gradient-neon)" }}>
-                Start Over
-              </button>
+            <div className="h-full min-h-[260px] grid place-items-center text-center">
+              <div>
+                <div className="text-4xl mb-3">🎯</div>
+                <div className="font-semibold mb-1">Ready to play?</div>
+                <div className="text-xs text-muted-foreground mb-4">Answer {TOTAL} random cricket questions.<br />1 point per correct = 1 credit (max 5).</div>
+                <button onClick={start} className="px-5 py-2.5 rounded-xl text-sm font-semibold text-white neon-glow" style={{ background: "var(--gradient-neon)" }}>
+                  Start Quiz
+                </button>
+              </div>
             </div>
           )}
 
-          {phase === "playing" && (
-            <>
-              {/* batsman */}
-              <div className="absolute left-[14%] top-1/2 -translate-y-1/2 text-3xl select-none">🏏</div>
-              {/* ball */}
-              <div
-                className="absolute top-1/2 h-4 w-4 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"
-                style={{ left: `${ballX}%`, transform: "translate(-50%, -50%)" }}
-              />
-              {/* swing button */}
-              <button
-                onClick={swing}
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 px-6 py-2 rounded-full text-sm font-bold text-white neon-glow active:scale-95"
-                style={{ background: "var(--gradient-neon)" }}>
-                SWING
-              </button>
-              {/* flash */}
-              {flash && (
-                <div className="absolute inset-0 grid place-items-center pointer-events-none">
-                  <div className={`text-5xl font-black ${flash === "out" ? "text-red-400" : "text-yellow-300"} drop-shadow-lg`}>
-                    {flash === "six" ? "SIX! +6" : flash === "four" ? "FOUR! +4" : flash === "one" ? "+1" : "MISS"}
-                  </div>
-                </div>
-              )}
-            </>
+          {phase === "locked" && (
+            <div className="h-full min-h-[260px] grid place-items-center text-center">
+              <div>
+                <div className="text-4xl mb-3">🔒</div>
+                <div className="font-semibold mb-1">Daily limit reached</div>
+                <div className="text-xs text-muted-foreground">You've played {DAILY_PLAY_LIMIT} times today.<br />Come back tomorrow for more credits!</div>
+              </div>
+            </div>
+          )}
+
+          {phase === "playing" && currentQ && (
+            <div>
+              <div className="font-semibold text-sm mb-4 leading-snug">{currentQ.q}</div>
+              <div className="grid gap-2">
+                {currentQ.options.map((opt, i) => {
+                  const isPicked = selected === i;
+                  const isCorrect = locked && i === currentQ.answer;
+                  const isWrong = locked && isPicked && i !== currentQ.answer;
+                  return (
+                    <button
+                      key={i}
+                      disabled={locked}
+                      onClick={() => pick(i)}
+                      className={`text-left rounded-xl px-3 py-2.5 text-sm border transition ${
+                        isCorrect ? "bg-emerald-500/25 border-emerald-400/60 text-emerald-100"
+                          : isWrong ? "bg-red-500/25 border-red-400/60 text-red-100"
+                          : "glass border-white/10 hover:bg-white/10"
+                      }`}
+                    >
+                      <span className="font-mono text-[10px] text-muted-foreground mr-2">{String.fromCharCode(65 + i)}</span>
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
           {phase === "done" && (
-            <div className="absolute inset-0 grid place-items-center text-center px-4">
+            <div className="h-full min-h-[260px] grid place-items-center text-center">
               <div>
                 <div className="text-4xl mb-2">🏆</div>
-                <div className="text-lg font-bold gradient-text">+{awarded} credits</div>
-                <div className="text-xs text-muted-foreground mt-1">Scored {score} runs</div>
-                <button onClick={start}
-                  className="mt-4 px-4 py-2 rounded-xl text-xs font-semibold glass hover:bg-white/10">
-                  Play again
-                </button>
+                <div className="text-lg font-bold gradient-text">{score}/{TOTAL} correct</div>
+                <div className="text-xs text-muted-foreground mt-1">+{awarded} credits earned</div>
+                {playsLeft > 0 ? (
+                  <button onClick={start} className="mt-4 px-4 py-2 rounded-xl text-xs font-semibold glass hover:bg-white/10">
+                    Play again ({playsLeft} left)
+                  </button>
+                ) : (
+                  <div className="mt-4 text-[11px] text-muted-foreground">Daily limit reached — see you tomorrow!</div>
+                )}
               </div>
             </div>
           )}
         </div>
 
-        <div className="mt-3 flex items-center justify-between text-xs">
-          <div className="glass rounded-full px-3 py-1.5 font-semibold">⏱ {timeLeft}s</div>
-          <div className="glass rounded-full px-3 py-1.5 font-semibold">🏏 {score} runs</div>
-        </div>
-        <div className="text-[10px] text-muted-foreground text-center mt-2">
-          Every 8 runs = 1 credit · max 5 per over
+        <div className="text-[10px] text-muted-foreground text-center mt-3">
+          Max {DAILY_PLAY_LIMIT} plays per day · 1 point per correct answer
         </div>
       </motion.div>
     </div>
