@@ -33,6 +33,8 @@ function ageFrom(date: string): number {
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const dest = safeNext(next, "/chat");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,9 +45,9 @@ function AuthPage() {
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) navigate({ to: "/chat" });
+      if (data.user) window.location.href = dest;
     });
-  }, [navigate]);
+  }, [dest]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
