@@ -225,3 +225,7 @@ div[style*="background-color: #ef4444"] {
     top: -9999px !important;
     pointer-events: none !important;
 }
+
+/* Global mobile hygiene — prevent horizontal scroll and let big gradient headings wrap. */
+html, body { overflow-x: hidden; max-width: 100vw; }
+.gradient-text { overflow-wrap: anywhere; word-break: break-word; }
