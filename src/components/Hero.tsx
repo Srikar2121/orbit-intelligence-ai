@@ -13,12 +13,12 @@ export function Hero() {
         </motion.div>
 
         <motion.h1 initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, delay: 0.1 }}
-          className="font-display text-6xl sm:text-7xl md:text-8xl font-extrabold leading-[0.95] tracking-tight">
+          className="font-display text-[2.75rem] xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold leading-[0.95] tracking-tight break-words">
           <span className="gradient-text">OrbitIntelligenceAI</span>
         </motion.h1>
 
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 0.8 }}
-          className="mt-6 text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
+          className="mt-6 text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
           Your thoughts. Connected. An intelligent AI companion that learns how you think,
           remembers what matters, and replies in milliseconds.
         </motion.p>
