@@ -1,15 +1,11 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Blobs } from "@/components/Blobs";
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
-import { Features } from "@/components/Features";
-import { ChatPreview } from "@/components/ChatPreview";
-
 import { Footer } from "@/components/Footer";
 import { Onboarding } from "@/components/Onboarding";
 import { PrivacyPopup } from "@/components/PrivacyPopup";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,15 +14,10 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "OrbitIntelligenceAI is a futuristic AI companion that learns how you think. Created by Srikar." },
       { property: "og:title", content: "OrbitIntelligenceAI — Your thoughts. Connected." },
       { property: "og:description", content: "A premium Gen-Z AI chat experience. Created by Srikar." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  beforeLoad: async () => {
-    if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) {
-      throw redirect({ to: "/auth" });
-    }
-  },
   component: Index,
 });
 
@@ -40,9 +31,6 @@ function Index() {
       <Navbar mode={mode} onModeChange={setMode} />
       <main>
         <Hero />
-        <Features />
-        <ChatPreview />
-        
       </main>
       <Footer />
       <Onboarding />
@@ -50,3 +38,4 @@ function Index() {
     </div>
   );
 }
+
