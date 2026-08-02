@@ -483,6 +483,70 @@ function ChatPage() {
       </div>
     );
 
+  const started = messages.some((m) => m.role === "user");
+
+  const composer = (
+    <div className="w-full">
+      {imageMode && (
+        <div className="mb-2 text-xs flex items-center gap-2 text-fuchsia-300">
+          <ImageIcon className="h-3.5 w-3.5" /> Image mode — Enter to generate. <button
+            onClick={() => setImageMode(false)} className="underline hover:text-white">cancel</button>
+        </div>
+      )}
+      <div className="glass rounded-2xl flex items-end gap-2 p-2 gradient-border focus-within:neon-glow transition">
+        <button
+          onClick={onAttachClick}
+          title="Attach code/text file"
+          className="h-10 w-10 rounded-xl grid place-items-center text-muted-foreground hover:text-white hover:bg-white/10 shrink-0"
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => setImageMode((v) => !v)}
+          title="Orbit Imagine — generate an image"
+          className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 transition ${
+            imageMode ? "text-white neon-glow" : "text-muted-foreground hover:text-white hover:bg-white/10"
+          }`}
+          style={imageMode ? { background: "var(--gradient-neon)" } : undefined}
+        >
+          <ImageIcon className="h-4 w-4" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".txt,.md,.json,.yaml,.yml,.toml,.xml,.csv,.tsv,.log,.env,.html,.htm,.css,.scss,.sass,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sh,.bash,.zsh,.sql,.prisma,.graphql,.gql,.vue,.svelte,.astro,text/*,application/json"
+          className="hidden"
+          onChange={onFilesChosen}
+        />
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+          }}
+          placeholder={imageMode
+            ? "Describe the image… (Enter to generate · Shift+Enter for new line)"
+            : "Message OrbitIntelligence… (Enter to send · Shift+Enter new line)"}
+          rows={1}
+          className="flex-1 bg-transparent px-2 py-2.5 outline-none text-sm placeholder:text-muted-foreground resize-none max-h-[180px] scrollbar-thin"
+        />
+        <button onClick={send} disabled={typing}
+          className="h-10 w-10 rounded-xl grid place-items-center text-white hover:scale-105 transition neon-glow disabled:opacity-50 disabled:hover:scale-100 shrink-0"
+          style={{ background: "var(--gradient-neon)" }}>
+          <Send className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="text-center text-[10px] text-muted-foreground mt-2">
+        {authed === false
+          ? "You're chatting as a guest — this conversation won't be saved."
+          : "OrbitIntelligence can make mistakes. Double check important info."}{" "}
+        Created by <span className="gradient-text font-semibold">Srikar</span>.
+      </div>
+    </div>
+  );
+
   return (
     <div className={`relative h-screen overflow-hidden flex flex-col mode-${mode} transition-colors duration-500`}>
       <Blobs variant={mode} />
