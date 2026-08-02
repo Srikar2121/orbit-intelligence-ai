@@ -11,7 +11,7 @@ import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listThreads, createThread, deleteThread, loadMessages, saveMessage,
-  consumeQuota, getPlanStatus, getProfile, updateAvatar, awardGameCredits,
+  consumeQuota, getPlanStatus, getProfile, updateAvatar, awardGameCredits, getMemory,
 } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -25,7 +25,23 @@ const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
 ];
 
-export const Route = createFileRoute("/_authenticated/chat")({
+export type OrbitModel = "rapid" | "lite" | "proman";
+const ORBIT_MODELS: { id: OrbitModel; label: string; hint: string }[] = [
+  { id: "rapid", label: "Orbit Rapid", hint: "balanced & fast" },
+  { id: "lite", label: "Orbit Lite Rapid", hint: "lightning light" },
+  { id: "proman", label: "Orbit Pro Man", hint: "deepest thinking" },
+];
+
+export type Effort = "low" | "medium" | "high";
+const EFFORTS: { id: Effort; label: string }[] = [
+  { id: "low", label: "Quick" },
+  { id: "medium", label: "Balanced" },
+  { id: "high", label: "Deep" },
+];
+
+
+
+export const Route = createFileRoute("/chat")({
   head: () => ({
     meta: [
       { title: "Chat · OrbitIntelligenceAI" },
@@ -82,6 +98,11 @@ function ChatPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [imageMode, setImageMode] = useState(false);
   const [gameOpen, setGameOpen] = useState(false);
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [orbitModel, setOrbitModel] = useState<OrbitModel>("rapid");
+  const [effort, setEffort] = useState<Effort>("medium");
+  const [memory, setMemory] = useState<string>("");
+  const memoryFn = useServerFn(getMemory);
   const awardFn = useServerFn(awardGameCredits);
   const scroller = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -89,9 +110,15 @@ function ChatPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setAuthed(!!data.user)).catch(() => setAuthed(false));
+  }, []);
+
+  useEffect(() => {
+    if (!authed) return;
     planStatus().then((s: any) => setPlan(s.plan)).catch(() => {});
     profileFn().then((p: any) => setProfile(p ?? null)).catch(() => {});
-  }, [planStatus, profileFn]);
+    memoryFn().then((m: any) => setMemory(typeof m === "string" ? m : "")).catch(() => {});
+  }, [authed, planStatus, profileFn, memoryFn]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -115,7 +142,8 @@ function ChatPage() {
     }
   }, [list]);
 
-  useEffect(() => { refreshThreads(); }, [refreshThreads]);
+  useEffect(() => { if (authed) refreshThreads(); }, [authed, refreshThreads]);
+
 
   const openThread = async (id: string) => {
     setActiveId(id);
@@ -296,20 +324,24 @@ function ChatPage() {
 
     if (imageMode) { await generateImage(text); return; }
 
-    try {
-      const q = await consume({ data: { model: mode } });
-      if (!q.allowed) {
-        setGameOpen(true);
+    const isGuest = !authed;
+
+    if (!isGuest) {
+      try {
+        const q = await consume({ data: { model: mode } });
+        if (!q.allowed) {
+          setGameOpen(true);
+          return;
+        }
+        setPlan(q.plan === "plus" ? "plus" : "free");
+      } catch {
+        toast.error("Couldn't check daily limit. Try again.");
         return;
       }
-      setPlan(q.plan === "plus" ? "plus" : "free");
-    } catch {
-      toast.error("Couldn't check daily limit. Try again.");
-      return;
     }
 
     let threadId = activeId;
-    if (!threadId) {
+    if (!isGuest && !threadId) {
       try {
         const t = (await create({ data: { title: text.slice(0, 60), mode } })) as Thread;
         threadId = t.id;
@@ -327,7 +359,7 @@ function ChatPage() {
     setInput("");
     setTyping(true);
 
-    save({ data: { threadId, role: "user", content: text } }).catch(() => {});
+    if (!isGuest && threadId) save({ data: { threadId, role: "user", content: text } }).catch(() => {});
 
     try {
       const history = [...messages, userMsg]
@@ -336,16 +368,15 @@ function ChatPage() {
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
-        toast.error("Session expired. Please sign in again.");
-        navigate({ to: "/auth" });
-        return;
-      }
       const resp = await fetch("/api/public/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ messages: history, mode }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ messages: history, mode, model: orbitModel, effort, memory: memory || undefined }),
       });
+
 
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Request failed" }));
@@ -386,10 +417,11 @@ function ChatPage() {
         }
       }
 
-      if (acc && threadId) {
+      if (acc && !isGuest && threadId) {
         save({ data: { threadId, role: "assistant", content: acc } }).catch(() => {});
         refreshThreads();
       }
+
     } catch (e) {
       console.error(e);
       setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, text: "⚠️ Network error. Try again." } : x)));
@@ -451,6 +483,70 @@ function ChatPage() {
       </div>
     );
 
+  const started = messages.some((m) => m.role === "user");
+
+  const composer = (
+    <div className="w-full">
+      {imageMode && (
+        <div className="mb-2 text-xs flex items-center gap-2 text-fuchsia-300">
+          <ImageIcon className="h-3.5 w-3.5" /> Image mode — Enter to generate. <button
+            onClick={() => setImageMode(false)} className="underline hover:text-white">cancel</button>
+        </div>
+      )}
+      <div className="glass rounded-2xl flex items-end gap-2 p-2 gradient-border focus-within:neon-glow transition">
+        <button
+          onClick={onAttachClick}
+          title="Attach code/text file"
+          className="h-10 w-10 rounded-xl grid place-items-center text-muted-foreground hover:text-white hover:bg-white/10 shrink-0"
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => setImageMode((v) => !v)}
+          title="Orbit Imagine — generate an image"
+          className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 transition ${
+            imageMode ? "text-white neon-glow" : "text-muted-foreground hover:text-white hover:bg-white/10"
+          }`}
+          style={imageMode ? { background: "var(--gradient-neon)" } : undefined}
+        >
+          <ImageIcon className="h-4 w-4" />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".txt,.md,.json,.yaml,.yml,.toml,.xml,.csv,.tsv,.log,.env,.html,.htm,.css,.scss,.sass,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sh,.bash,.zsh,.sql,.prisma,.graphql,.gql,.vue,.svelte,.astro,text/*,application/json"
+          className="hidden"
+          onChange={onFilesChosen}
+        />
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
+          }}
+          placeholder={imageMode
+            ? "Describe the image… (Enter to generate · Shift+Enter for new line)"
+            : "Message OrbitIntelligence… (Enter to send · Shift+Enter new line)"}
+          rows={1}
+          className="flex-1 bg-transparent px-2 py-2.5 outline-none text-sm placeholder:text-muted-foreground resize-none max-h-[180px] scrollbar-thin"
+        />
+        <button onClick={send} disabled={typing}
+          className="h-10 w-10 rounded-xl grid place-items-center text-white hover:scale-105 transition neon-glow disabled:opacity-50 disabled:hover:scale-100 shrink-0"
+          style={{ background: "var(--gradient-neon)" }}>
+          <Send className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="text-center text-[10px] text-muted-foreground mt-2">
+        {authed === false
+          ? "You're chatting as a guest — this conversation won't be saved."
+          : "OrbitIntelligence can make mistakes. Double check important info."}{" "}
+        Created by <span className="gradient-text font-semibold">Srikar</span>.
+      </div>
+    </div>
+  );
+
   return (
     <div className={`relative h-screen overflow-hidden flex flex-col mode-${mode} transition-colors duration-500`}>
       <Blobs variant={mode} />
@@ -491,6 +587,20 @@ function ChatPage() {
             })}
           </div>
           <div className="flex items-center gap-2">
+            <select value={orbitModel} onChange={(e) => setOrbitModel(e.target.value as OrbitModel)}
+              title="Orbit model"
+              className="glass rounded-full px-3 py-1.5 text-xs font-semibold bg-transparent outline-none max-w-[140px]">
+              {ORBIT_MODELS.map((m) => (
+                <option key={m.id} value={m.id} className="bg-background">{m.label}</option>
+              ))}
+            </select>
+            <select value={effort} onChange={(e) => setEffort(e.target.value as Effort)}
+              title="How much effort Orbit puts into the answer"
+              className="hidden sm:block glass rounded-full px-3 py-1.5 text-xs font-semibold bg-transparent outline-none">
+              {EFFORTS.map((e2) => (
+                <option key={e2.id} value={e2.id} className="bg-background">Effort: {e2.label}</option>
+              ))}
+            </select>
             <div className="md:hidden">
               <select value={mode} onChange={(e) => switchMode(e.target.value as Mode)}
                 className="glass rounded-full px-3 py-1.5 text-xs font-semibold bg-transparent outline-none">
@@ -499,22 +609,28 @@ function ChatPage() {
                 ))}
               </select>
             </div>
-            <button onClick={() => setGameOpen(true)}
-              className="hidden sm:flex items-center gap-1.5 glass rounded-full px-3 py-1.5 text-xs font-semibold text-fuchsia-200 hover:text-white hover:neon-glow transition"
-              title="Play a game to earn extra chat credits">
-              <Gamepad2 className="h-3.5 w-3.5" /> Earn credits
-            </button>
-            <button onClick={() => setGameOpen(true)}
-              className="sm:hidden h-9 w-9 grid place-items-center rounded-full glass text-fuchsia-200"
-              title="Earn credits">
-              <Gamepad2 className="h-4 w-4" />
-            </button>
-            <button onClick={() => setProfileOpen(true)}
-              className="rounded-full ring-2 ring-white/10 hover:ring-white/30 transition"
-              title="Profile">
-              <UserAvatar size={34} />
-            </button>
+            {authed && (
+              <button onClick={() => setGameOpen(true)}
+                className="hidden sm:flex items-center gap-1.5 glass rounded-full px-3 py-1.5 text-xs font-semibold text-fuchsia-200 hover:text-white hover:neon-glow transition"
+                title="Play a game to earn extra chat credits">
+                <Gamepad2 className="h-3.5 w-3.5" /> Earn credits
+              </button>
+            )}
+            {authed ? (
+              <button onClick={() => setProfileOpen(true)}
+                className="rounded-full ring-2 ring-white/10 hover:ring-white/30 transition"
+                title="Profile">
+                <UserAvatar size={34} />
+              </button>
+            ) : (
+              <Link to="/auth" search={{ next: "/chat" }}
+                className="rounded-full px-4 py-1.5 text-xs font-semibold text-white neon-glow"
+                style={{ background: "var(--gradient-neon)" }}>
+                Sign in
+              </Link>
+            )}
           </div>
+
         </div>
       </header>
 
@@ -541,20 +657,46 @@ function ChatPage() {
               </div>
             ))}
           </div>
-          <Link to="/build" className="mt-3 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10 border border-emerald-500/30 text-emerald-300">
-            <Code2 className="h-3.5 w-3.5" /> Build Mode
-          </Link>
-          <button onClick={signOut} className="mt-2 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10">
-            <LogOut className="h-3.5 w-3.5" /> Sign out
-          </button>
+          {authed ? (
+            <>
+              <Link to="/build" className="mt-3 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10 border border-emerald-500/30 text-emerald-300">
+                <Code2 className="h-3.5 w-3.5" /> Build Mode
+              </Link>
+              <button onClick={signOut} className="mt-2 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10">
+                <LogOut className="h-3.5 w-3.5" /> Sign out
+              </button>
+            </>
+          ) : (
+            <Link to="/auth" search={{ next: "/chat" }}
+              className="mt-3 w-full rounded-xl py-2 text-xs font-semibold text-white flex items-center justify-center gap-2 neon-glow"
+              style={{ background: "var(--gradient-neon)" }}>
+              Sign in to save chats
+            </Link>
+          )}
           <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-muted-foreground text-center">
             Crafted with 💜 by <span className="gradient-text font-semibold">Srikar</span>
           </div>
         </aside>
 
+
         {/* Conversation */}
         <section className="glass rounded-2xl flex flex-col min-h-0 gradient-border">
-          <div ref={scroller} className="flex-1 overflow-auto scrollbar-thin p-4 sm:p-6 space-y-4">
+          {!started && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 text-center">
+              <div className="h-16 w-16 rounded-3xl grid place-items-center neon-glow" style={{ background: "var(--gradient-neon)" }}>
+                <Sparkles className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold gradient-text">{WELCOME[mode]}</h1>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {ORBIT_MODELS.find((m) => m.id === orbitModel)?.label} · Effort: {EFFORTS.find((e) => e.id === effort)?.label}
+                </p>
+              </div>
+              <div className="w-full max-w-2xl">{composer}</div>
+            </div>
+          )}
+          <div ref={scroller} className={`flex-1 overflow-auto scrollbar-thin p-4 sm:p-6 space-y-4 ${started ? "" : "hidden"}`}>
+
             <AnimatePresence initial={false}>
               {messages.map((m) => (
                 <motion.div key={m.id}
@@ -597,64 +739,11 @@ function ChatPage() {
             </AnimatePresence>
           </div>
 
-          {/* Input */}
-          <div className="p-3 sm:p-4 border-t border-white/10">
-            {imageMode && (
-              <div className="mb-2 text-xs flex items-center gap-2 text-fuchsia-300">
-                <ImageIcon className="h-3.5 w-3.5" /> Image mode — Enter to generate. <button
-                  onClick={() => setImageMode(false)} className="underline hover:text-white">cancel</button>
-              </div>
-            )}
-            <div className="glass rounded-2xl flex items-end gap-2 p-2 gradient-border focus-within:neon-glow transition">
-              <button
-                onClick={onAttachClick}
-                title="Attach code/text file"
-                className="h-10 w-10 rounded-xl grid place-items-center text-muted-foreground hover:text-white hover:bg-white/10 shrink-0"
-              >
-                <Paperclip className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setImageMode((v) => !v)}
-                title="Generate an image"
-                className={`h-10 w-10 rounded-xl grid place-items-center shrink-0 transition ${
-                  imageMode ? 'text-white neon-glow' : 'text-muted-foreground hover:text-white hover:bg-white/10'
-                }`}
-                style={imageMode ? { background: 'var(--gradient-neon)' } : undefined}
-              >
-                <ImageIcon className="h-4 w-4" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".txt,.md,.json,.yaml,.yml,.toml,.xml,.csv,.tsv,.log,.env,.html,.htm,.css,.scss,.sass,.less,.js,.jsx,.ts,.tsx,.mjs,.cjs,.py,.rb,.go,.rs,.java,.kt,.swift,.c,.h,.cc,.cpp,.hpp,.cs,.php,.sh,.bash,.zsh,.sql,.prisma,.graphql,.gql,.vue,.svelte,.astro,text/*,application/json"
-                className="hidden"
-                onChange={onFilesChosen}
-              />
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
-                }}
-                placeholder={imageMode
-                  ? "Describe the image… (Enter to generate · Shift+Enter for new line)"
-                  : "Message OrbitIntelligence… (Enter to send · Shift+Enter new line · ⌘K new chat)"}
-                rows={1}
-                className="flex-1 bg-transparent px-2 py-2.5 outline-none text-sm placeholder:text-muted-foreground resize-none max-h-[180px] scrollbar-thin"
-              />
-              <button onClick={send} disabled={typing}
-                className="h-10 w-10 rounded-xl grid place-items-center text-white hover:scale-105 transition neon-glow disabled:opacity-50 disabled:hover:scale-100 shrink-0"
-                style={{ background: 'var(--gradient-neon)' }}>
-                <Send className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="text-center text-[10px] text-muted-foreground mt-2">
-              OrbitIntelligence can make mistakes. Double check important info. Created by <span className="gradient-text font-semibold">Srikar</span>.
-            </div>
-          </div>
+          {started && (
+            <div className="p-3 sm:p-4 border-t border-white/10">{composer}</div>
+          )}
         </section>
+
       </div>
 
       {/* Profile modal */}

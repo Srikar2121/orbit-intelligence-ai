@@ -20,10 +20,19 @@ const SYSTEM_PROMPTS: Record<Mode, string> = {
     BUILD_MODE_AWARENESS,
 };
 
-const MODEL_FOR_MODE: Record<Mode, string> = {
-  default: "google/gemini-3-flash-preview",
-  genz: "google/gemini-3-flash-preview",
-  codey: "google/gemini-3-flash-preview",
+type OrbitModel = "rapid" | "lite" | "proman";
+
+const MODEL_MAP: Record<OrbitModel, string> = {
+  rapid: "google/gemini-3.6-flash",
+  lite: "google/gemini-3.1-flash-lite",
+  proman: "google/gemini-2.5-pro",
+};
+
+const EFFORT_PROMPT: Record<"low" | "medium" | "high", string> = {
+  low: " Effort level: QUICK — answer in as few words as possible, no preamble.",
+  medium: " Effort level: BALANCED — a clear, complete answer with light structure.",
+  high:
+    " Effort level: DEEP — think carefully, cover edge cases, show reasoning steps and structure the answer thoroughly.",
 };
 
 const bodySchema = z.object({
@@ -37,7 +46,11 @@ const bodySchema = z.object({
     .min(1)
     .max(50),
   mode: z.enum(["default", "genz", "codey"]),
+  model: z.enum(["rapid", "lite", "proman"]).default("rapid"),
+  effort: z.enum(["low", "medium", "high"]).default("medium"),
+  memory: z.string().max(6000).optional(),
 });
+
 
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
@@ -51,13 +64,9 @@ export const Route = createFileRoute("/api/public/chat")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          // 1. Require Bearer token
+          // 1. Optional Bearer token — guests may chat without saving
           const authHeader = request.headers.get("authorization") ?? "";
-          if (!authHeader.startsWith("Bearer ")) {
-            return jsonError("Unauthorized", 401);
-          }
-          const token = authHeader.slice(7).trim();
-          if (!token) return jsonError("Unauthorized", 401);
+          const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
 
           const SUPABASE_URL = process.env.SUPABASE_URL;
           const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -65,41 +74,48 @@ export const Route = createFileRoute("/api/public/chat")({
             return jsonError("Server not configured", 500);
           }
 
-          const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-            global: { headers: { Authorization: `Bearer ${token}` } },
-            auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
-          });
-
-          const { data: userData, error: userErr } = await supabase.auth.getUser(token);
-          if (userErr || !userData?.user) return jsonError("Unauthorized", 401);
-
           // 2. Validate payload
           let parsed: z.infer<typeof bodySchema>;
           try {
             parsed = bodySchema.parse(await request.json());
-          } catch (e) {
+          } catch {
             return jsonError("Invalid request body", 400);
           }
-          const { messages, mode } = parsed;
+          const { mode, model, effort, memory } = parsed;
+          let messages = parsed.messages;
 
+          if (token) {
+            const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+              global: { headers: { Authorization: `Bearer ${token}` } },
+              auth: { storage: undefined, persistSession: false, autoRefreshToken: false },
+            });
 
+            const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+            if (userErr || !userData?.user) return jsonError("Unauthorized", 401);
 
-
-          // 4. Enforce per-model daily quota server-side
-          const { data: quotaRows, error: quotaErr } = await supabase.rpc(
-            "consume_chat_quota",
-            { _model: mode },
-          );
-          if (quotaErr) return jsonError("Quota check failed", 500);
-          const quota = Array.isArray(quotaRows) ? quotaRows[0] : quotaRows;
-          if (!quota?.allowed) {
-            return jsonError("Daily message limit reached", 429);
+            // Enforce per-model daily quota server-side
+            const { data: quotaRows, error: quotaErr } = await supabase.rpc("consume_chat_quota", {
+              _model: mode,
+            });
+            if (quotaErr) return jsonError("Quota check failed", 500);
+            const quota = Array.isArray(quotaRows) ? quotaRows[0] : quotaRows;
+            if (!quota?.allowed) {
+              return jsonError("Daily message limit reached", 429);
+            }
+          } else {
+            // Guests: no persistence and a shorter context window
+            messages = messages.slice(-12);
           }
 
           const apiKey = process.env.LOVABLE_API_KEY;
           if (!apiKey) return jsonError("LOVABLE_API_KEY is not configured", 500);
 
-          const system = SYSTEM_PROMPTS[mode];
+          const system =
+            SYSTEM_PROMPTS[mode] +
+            EFFORT_PROMPT[effort] +
+            (token && memory
+              ? `\n\nLong-term memory of earlier conversations with this user (use it naturally, don't recite it):\n${memory}`
+              : "");
 
           const response = await fetch(
             "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -110,12 +126,13 @@ export const Route = createFileRoute("/api/public/chat")({
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                model: MODEL_FOR_MODE[mode],
+                model: MODEL_MAP[model as OrbitModel],
                 messages: [{ role: "system", content: system }, ...messages],
                 stream: true,
               }),
             },
           );
+
 
           if (!response.ok) {
             if (response.status === 429) return jsonError("Rate limit exceeded. Try again in a moment.", 429);
