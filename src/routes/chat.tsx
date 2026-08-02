@@ -11,7 +11,7 @@ import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
 import {
   listThreads, createThread, deleteThread, loadMessages, saveMessage,
-  consumeQuota, getPlanStatus, getProfile, updateAvatar, awardGameCredits,
+  consumeQuota, getPlanStatus, getProfile, updateAvatar, awardGameCredits, getMemory,
 } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

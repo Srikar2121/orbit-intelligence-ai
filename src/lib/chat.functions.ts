@@ -183,3 +183,22 @@ export const awardGameCredits = createServerFn({ method: "POST" })
     const row = Array.isArray(rows) ? rows[0] : rows;
     return row as { remaining: number; quota: number; plan: string };
   });
+
+// Cross-thread long-term memory: a compact digest of the user's recent chats,
+// injected into the system prompt so Orbit "remembers" past conversations.
+export const getMemory = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("chat_messages")
+      .select("role, content, created_at")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(40);
+    if (error) return "";
+    const rows = (data ?? []).slice().reverse();
+    if (!rows.length) return "";
+    return rows
+      .map((r) => `${r.role === "assistant" ? "Orbit" : "User"}: ${String(r.content).slice(0, 240)}`)
+      .join("\n");
+  });
