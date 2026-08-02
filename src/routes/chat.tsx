@@ -98,6 +98,11 @@ function ChatPage() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [imageMode, setImageMode] = useState(false);
   const [gameOpen, setGameOpen] = useState(false);
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [orbitModel, setOrbitModel] = useState<OrbitModel>("rapid");
+  const [effort, setEffort] = useState<Effort>("medium");
+  const [memory, setMemory] = useState<string>("");
+  const memoryFn = useServerFn(getMemory);
   const awardFn = useServerFn(awardGameCredits);
   const scroller = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -105,9 +110,15 @@ function ChatPage() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setAuthed(!!data.user)).catch(() => setAuthed(false));
+  }, []);
+
+  useEffect(() => {
+    if (!authed) return;
     planStatus().then((s: any) => setPlan(s.plan)).catch(() => {});
     profileFn().then((p: any) => setProfile(p ?? null)).catch(() => {});
-  }, [planStatus, profileFn]);
+    memoryFn().then((m: any) => setMemory(typeof m === "string" ? m : "")).catch(() => {});
+  }, [authed, planStatus, profileFn, memoryFn]);
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
@@ -131,7 +142,8 @@ function ChatPage() {
     }
   }, [list]);
 
-  useEffect(() => { refreshThreads(); }, [refreshThreads]);
+  useEffect(() => { if (authed) refreshThreads(); }, [authed, refreshThreads]);
+
 
   const openThread = async (id: string) => {
     setActiveId(id);
