@@ -187,6 +187,11 @@ function AuthPage() {
             You must be at least 9 to create an account.
           </p>
         )}
+
+        <Link to="/chat" className="mt-4 block text-center text-xs text-muted-foreground hover:text-white underline">
+          Continue as guest (chats won't be saved)
+        </Link>
+
       </div>
     </div>
   );
