@@ -20,10 +20,19 @@ const SYSTEM_PROMPTS: Record<Mode, string> = {
     BUILD_MODE_AWARENESS,
 };
 
-const MODEL_FOR_MODE: Record<Mode, string> = {
-  default: "google/gemini-3-flash-preview",
-  genz: "google/gemini-3-flash-preview",
-  codey: "google/gemini-3-flash-preview",
+type OrbitModel = "rapid" | "lite" | "proman";
+
+const MODEL_MAP: Record<OrbitModel, string> = {
+  rapid: "google/gemini-3.6-flash",
+  lite: "google/gemini-3.1-flash-lite",
+  proman: "google/gemini-2.5-pro",
+};
+
+const EFFORT_PROMPT: Record<"low" | "medium" | "high", string> = {
+  low: " Effort level: QUICK — answer in as few words as possible, no preamble.",
+  medium: " Effort level: BALANCED — a clear, complete answer with light structure.",
+  high:
+    " Effort level: DEEP — think carefully, cover edge cases, show reasoning steps and structure the answer thoroughly.",
 };
 
 const bodySchema = z.object({
@@ -37,7 +46,11 @@ const bodySchema = z.object({
     .min(1)
     .max(50),
   mode: z.enum(["default", "genz", "codey"]),
+  model: z.enum(["rapid", "lite", "proman"]).default("rapid"),
+  effort: z.enum(["low", "medium", "high"]).default("medium"),
+  memory: z.string().max(6000).optional(),
 });
+
 
 function jsonError(message: string, status: number) {
   return new Response(JSON.stringify({ error: message }), {
