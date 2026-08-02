@@ -25,6 +25,22 @@ const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
 ];
 
+export type OrbitModel = "rapid" | "lite" | "proman";
+const ORBIT_MODELS: { id: OrbitModel; label: string; hint: string }[] = [
+  { id: "rapid", label: "Orbit Rapid", hint: "balanced & fast" },
+  { id: "lite", label: "Orbit Lite Rapid", hint: "lightning light" },
+  { id: "proman", label: "Orbit Pro Man", hint: "deepest thinking" },
+];
+
+export type Effort = "low" | "medium" | "high";
+const EFFORTS: { id: Effort; label: string }[] = [
+  { id: "low", label: "Quick" },
+  { id: "medium", label: "Balanced" },
+  { id: "high", label: "Deep" },
+];
+
+
+
 export const Route = createFileRoute("/chat")({
   head: () => ({
     meta: [
