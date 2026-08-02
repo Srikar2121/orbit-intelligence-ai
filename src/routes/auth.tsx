@@ -91,18 +91,19 @@ function AuthPage() {
     }
   };
 
-  const signInGoogle = async () => {
+  const signInWith = async (provider: "google" | "apple") => {
     setBusy(true);
-    const res = await lovable.auth.signInWithOAuth("google", {
+    const res = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: `${window.location.origin}${dest}`,
     });
     if (res.error) {
-      toast.error(res.error.message ?? "Google sign-in failed");
+      toast.error(res.error.message ?? `${provider} sign-in failed`);
       setBusy(false);
       return;
     }
     if (!res.redirected) window.location.href = dest;
   };
+
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 mode-genz">
