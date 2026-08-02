@@ -681,7 +681,22 @@ function ChatPage() {
 
         {/* Conversation */}
         <section className="glass rounded-2xl flex flex-col min-h-0 gradient-border">
-          <div ref={scroller} className="flex-1 overflow-auto scrollbar-thin p-4 sm:p-6 space-y-4">
+          {!started && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 text-center">
+              <div className="h-16 w-16 rounded-3xl grid place-items-center neon-glow" style={{ background: "var(--gradient-neon)" }}>
+                <Sparkles className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-bold gradient-text">{WELCOME[mode]}</h1>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {ORBIT_MODELS.find((m) => m.id === orbitModel)?.label} · Effort: {EFFORTS.find((e) => e.id === effort)?.label}
+                </p>
+              </div>
+              <div className="w-full max-w-2xl">{composer}</div>
+            </div>
+          )}
+          <div ref={scroller} className={`flex-1 overflow-auto scrollbar-thin p-4 sm:p-6 space-y-4 ${started ? "" : "hidden"}`}>
+
             <AnimatePresence initial={false}>
               {messages.map((m) => (
                 <motion.div key={m.id}
