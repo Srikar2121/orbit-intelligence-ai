@@ -25,7 +25,7 @@ const MODES: { id: Mode; label: string; sub: string; icon: any; emoji: string }[
   { id: "codey", label: "Codey", sub: "for Elon & Bezos", icon: Code2, emoji: "🚀" },
 ];
 
-export const Route = createFileRoute("/_authenticated/chat")({
+export const Route = createFileRoute("/chat")({
   head: () => ({
     meta: [
       { title: "Chat · OrbitIntelligenceAI" },
