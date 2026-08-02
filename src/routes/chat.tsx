@@ -417,10 +417,11 @@ function ChatPage() {
         }
       }
 
-      if (acc && threadId) {
+      if (acc && !isGuest && threadId) {
         save({ data: { threadId, role: "assistant", content: acc } }).catch(() => {});
         refreshThreads();
       }
+
     } catch (e) {
       console.error(e);
       setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, text: "⚠️ Network error. Try again." } : x)));
