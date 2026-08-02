@@ -324,20 +324,24 @@ function ChatPage() {
 
     if (imageMode) { await generateImage(text); return; }
 
-    try {
-      const q = await consume({ data: { model: mode } });
-      if (!q.allowed) {
-        setGameOpen(true);
+    const isGuest = !authed;
+
+    if (!isGuest) {
+      try {
+        const q = await consume({ data: { model: mode } });
+        if (!q.allowed) {
+          setGameOpen(true);
+          return;
+        }
+        setPlan(q.plan === "plus" ? "plus" : "free");
+      } catch {
+        toast.error("Couldn't check daily limit. Try again.");
         return;
       }
-      setPlan(q.plan === "plus" ? "plus" : "free");
-    } catch {
-      toast.error("Couldn't check daily limit. Try again.");
-      return;
     }
 
     let threadId = activeId;
-    if (!threadId) {
+    if (!isGuest && !threadId) {
       try {
         const t = (await create({ data: { title: text.slice(0, 60), mode } })) as Thread;
         threadId = t.id;
@@ -355,7 +359,7 @@ function ChatPage() {
     setInput("");
     setTyping(true);
 
-    save({ data: { threadId, role: "user", content: text } }).catch(() => {});
+    if (!isGuest && threadId) save({ data: { threadId, role: "user", content: text } }).catch(() => {});
 
     try {
       const history = [...messages, userMsg]
@@ -364,16 +368,15 @@ function ChatPage() {
 
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
-        toast.error("Session expired. Please sign in again.");
-        navigate({ to: "/auth" });
-        return;
-      }
       const resp = await fetch("/api/public/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-        body: JSON.stringify({ messages: history, mode }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ messages: history, mode, model: orbitModel, effort, memory: memory || undefined }),
       });
+
 
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Request failed" }));
