@@ -14,13 +14,20 @@ export function Footer() {
               <div className="text-xs text-muted-foreground">Your thoughts. Connected.</div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            {[Twitter, Instagram, Github].map((Icon, i) => (
-              <a key={i} href="#" className="h-10 w-10 rounded-xl glass grid place-items-center hover:bg-white/10 transition">
-                <Icon className="h-4 w-4" />
-              </a>
-            ))}
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <a href="mailto:Challavenkatasrikar21@gmail.com"
+              className="glass rounded-xl px-4 py-2 text-xs font-semibold hover:bg-white/10 transition">
+              Contact: Challavenkatasrikar21@gmail.com
+            </a>
+            <div className="flex items-center gap-3">
+              {[Twitter, Instagram, Github].map((Icon, i) => (
+                <a key={i} href="#" className="h-10 w-10 rounded-xl glass grid place-items-center hover:bg-white/10 transition">
+                  <Icon className="h-4 w-4" />
+                </a>
+              ))}
+            </div>
           </div>
+
         </div>
         <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-muted-foreground">
           <div>© {new Date().getFullYear()} OrbitIntelligenceAI · All vibes reserved.</div>
