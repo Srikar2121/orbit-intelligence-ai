@@ -29,9 +29,6 @@ export function Hero() {
             Start Chatting
             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition" />
           </Link>
-          <a href="#features" className="inline-flex items-center gap-2 rounded-2xl px-7 py-3.5 font-semibold glass hover:bg-white/10 transition">
-            Explore Features
-          </a>
         </motion.div>
 
         {/* Glowing orb */}
