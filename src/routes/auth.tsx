@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles, Mail, Lock, User, Calendar, ArrowLeft } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Calendar, ArrowLeft, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
 import { Blobs } from "@/components/Blobs";
