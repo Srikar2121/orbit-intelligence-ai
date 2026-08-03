@@ -198,6 +198,53 @@ function AuthPage() {
           Continue with Apple
         </button>
 
+        <button
+          type="button"
+          onClick={() => setPhoneOpen((v) => !v)}
+          className="mt-2 w-full glass rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10"
+        >
+          <Phone className="h-4 w-4" />
+          Continue with phone number
+        </button>
+
+        {phoneOpen && (
+          <div className="mt-2 space-y-2">
+            <Field
+              icon={<Phone className="h-4 w-4" />}
+              placeholder="+14155550123"
+              type="tel"
+              value={phone}
+              onChange={(v) => setPhone(v)}
+            />
+            {otpSent && (
+              <Field
+                icon={<Lock className="h-4 w-4" />}
+                placeholder="6-digit code"
+                value={otp}
+                onChange={setOtp}
+              />
+            )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={otpSent ? verifyOtp : sendOtp}
+              className="w-full rounded-xl py-2.5 text-sm font-semibold text-white neon-glow disabled:opacity-50"
+              style={{ background: "var(--gradient-neon)" }}
+            >
+              {busy ? "…" : otpSent ? "Verify code" : "Send code"}
+            </button>
+            {otpSent && (
+              <button
+                type="button"
+                onClick={() => { setOtpSent(false); setOtp(""); }}
+                className="w-full text-[11px] text-muted-foreground hover:text-white underline"
+              >
+                Use a different number
+              </button>
+            )}
+          </div>
+        )}
+
 
         <div className="flex items-center gap-3 my-4 text-[11px] text-muted-foreground">
           <div className="h-px bg-white/10 flex-1" /> or email <div className="h-px bg-white/10 flex-1" />
