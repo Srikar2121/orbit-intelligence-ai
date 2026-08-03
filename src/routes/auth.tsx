@@ -91,18 +91,7 @@ function AuthPage() {
     }
   };
 
-  const signInWith = async (provider: "google" | "apple") => {
-    setBusy(true);
-    const res = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: `${window.location.origin}${dest}`,
-    });
-    if (res.error) {
-      toast.error(res.error.message ?? `${provider} sign-in failed`);
-      setBusy(false);
-      return;
-    }
-    if (!res.redirected) window.location.href = dest;
-  };
+
 
 
   return (
