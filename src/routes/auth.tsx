@@ -41,48 +41,8 @@ function AuthPage() {
   const [username, setUsername] = useState("");
   const [birth, setBirth] = useState("");
   const [busy, setBusy] = useState(false);
-  const [phoneOpen, setPhoneOpen] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const save = useServerFn(upsertProfile);
 
-  const sendOtp = async () => {
-    const value = phone.trim();
-    if (!/^\+[1-9]\d{7,14}$/.test(value)) {
-      toast.error("Enter your number in international format, e.g. +14155550123");
-      return;
-    }
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ phone: value });
-      if (error) throw error;
-      setOtpSent(true);
-      toast.success("Code sent 📱");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send the code.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    const code = otp.trim();
-    if (!/^\d{4,8}$/.test(code)) {
-      toast.error("Enter the code from your SMS.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({ phone: phone.trim(), token: code, type: "sms" });
-      if (error) throw error;
-      toast.success("Welcome 💜");
-      window.location.href = dest;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid or expired code.");
-      setBusy(false);
-    }
-  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
