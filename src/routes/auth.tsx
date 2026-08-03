@@ -1,8 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles, Mail, Lock, User, Calendar, ArrowLeft, Phone } from "lucide-react";
+import { Sparkles, Mail, Lock, User, Calendar, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable";
 import { Blobs } from "@/components/Blobs";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -41,48 +40,8 @@ function AuthPage() {
   const [username, setUsername] = useState("");
   const [birth, setBirth] = useState("");
   const [busy, setBusy] = useState(false);
-  const [phoneOpen, setPhoneOpen] = useState(false);
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const save = useServerFn(upsertProfile);
 
-  const sendOtp = async () => {
-    const value = phone.trim();
-    if (!/^\+[1-9]\d{7,14}$/.test(value)) {
-      toast.error("Enter your number in international format, e.g. +14155550123");
-      return;
-    }
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({ phone: value });
-      if (error) throw error;
-      setOtpSent(true);
-      toast.success("Code sent 📱");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not send the code.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    const code = otp.trim();
-    if (!/^\d{4,8}$/.test(code)) {
-      toast.error("Enter the code from your SMS.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const { error } = await supabase.auth.verifyOtp({ phone: phone.trim(), token: code, type: "sms" });
-      if (error) throw error;
-      toast.success("Welcome 💜");
-      window.location.href = dest;
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Invalid or expired code.");
-      setBusy(false);
-    }
-  };
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -132,18 +91,7 @@ function AuthPage() {
     }
   };
 
-  const signInWith = async (provider: "google" | "apple") => {
-    setBusy(true);
-    const res = await lovable.auth.signInWithOAuth(provider, {
-      redirect_uri: `${window.location.origin}${dest}`,
-    });
-    if (res.error) {
-      toast.error(res.error.message ?? `${provider} sign-in failed`);
-      setBusy(false);
-      return;
-    }
-    if (!res.redirected) window.location.href = dest;
-  };
+
 
 
   return (
@@ -176,78 +124,6 @@ function AuthPage() {
               {m === "signin" ? "Sign in" : "Create account"}
             </button>
           ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={() => signInWith("google")}
-          disabled={busy}
-          className="w-full glass rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10 disabled:opacity-50"
-        >
-          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5h-1.9V20H24v8h11.3c-1.6 4.5-5.9 8-11.3 8a12 12 0 1 1 0-24c3 0 5.8 1.1 8 3l5.7-5.7A20 20 0 1 0 24 44c11 0 20-9 20-20 0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 16 19 13 24 13c3 0 5.8 1.1 8 3l5.7-5.7A20 20 0 0 0 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.6-5.3l-6.3-5.3a12 12 0 0 1-18.6-5.5l-6.5 5A20 20 0 0 0 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4-4 5.4l6.3 5.3c-.4.4 6.7-4.9 6.7-14.7 0-1.2-.1-2.3-.4-3.5z"/></svg>
-          Continue with Google
-        </button>
-
-        <button
-          type="button"
-          onClick={() => signInWith("apple")}
-          disabled={busy}
-          className="mt-2 w-full glass rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10 disabled:opacity-50"
-        >
-          <svg width="16" height="16" viewBox="0 0 384 512" fill="currentColor"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
-          Continue with Apple
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setPhoneOpen((v) => !v)}
-          className="mt-2 w-full glass rounded-xl py-2.5 text-sm font-semibold flex items-center justify-center gap-2 hover:bg-white/10"
-        >
-          <Phone className="h-4 w-4" />
-          Continue with phone number
-        </button>
-
-        {phoneOpen && (
-          <div className="mt-2 space-y-2">
-            <Field
-              icon={<Phone className="h-4 w-4" />}
-              placeholder="+14155550123"
-              type="tel"
-              value={phone}
-              onChange={(v) => setPhone(v)}
-            />
-            {otpSent && (
-              <Field
-                icon={<Lock className="h-4 w-4" />}
-                placeholder="6-digit code"
-                value={otp}
-                onChange={setOtp}
-              />
-            )}
-            <button
-              type="button"
-              disabled={busy}
-              onClick={otpSent ? verifyOtp : sendOtp}
-              className="w-full rounded-xl py-2.5 text-sm font-semibold text-white neon-glow disabled:opacity-50"
-              style={{ background: "var(--gradient-neon)" }}
-            >
-              {busy ? "…" : otpSent ? "Verify code" : "Send code"}
-            </button>
-            {otpSent && (
-              <button
-                type="button"
-                onClick={() => { setOtpSent(false); setOtp(""); }}
-                className="w-full text-[11px] text-muted-foreground hover:text-white underline"
-              >
-                Use a different number
-              </button>
-            )}
-          </div>
-        )}
-
-
-        <div className="flex items-center gap-3 my-4 text-[11px] text-muted-foreground">
-          <div className="h-px bg-white/10 flex-1" /> or email <div className="h-px bg-white/10 flex-1" />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
