@@ -251,14 +251,15 @@ ${fileList}`;
     return { changedFiles: Object.keys(validFiles), files: merged };
   });
 
-// Vercel token management
+// Vercel token management — tokens live in a restricted table unreachable via the Data API
 export const getVercelStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("profiles")
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("user_deploy_credentials")
       .select("vercel_token")
-      .eq("id", context.userId)
+      .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     return { connected: !!data?.vercel_token };
@@ -276,10 +277,10 @@ export const saveVercelToken = createServerFn({ method: "POST" })
     });
     if (!ver.ok) throw new Error("Invalid Vercel token");
 
-    const { error } = await context.supabase
-      .from("profiles")
-      .update({ vercel_token: data.token })
-      .eq("id", context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("user_deploy_credentials")
+      .upsert({ user_id: context.userId, vercel_token: data.token }, { onConflict: "user_id" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -287,10 +288,11 @@ export const saveVercelToken = createServerFn({ method: "POST" })
 export const disconnectVercel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { error } = await context.supabase
-      .from("profiles")
-      .update({ vercel_token: null })
-      .eq("id", context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin
+      .from("user_deploy_credentials")
+      .delete()
+      .eq("user_id", context.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -300,13 +302,18 @@ export const deployToVercel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ projectId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const [{ data: profile, error: profErr }, { data: project, error: projErr }] = await Promise.all([
-      context.supabase.from("profiles").select("vercel_token").eq("id", context.userId).maybeSingle(),
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [{ data: creds, error: profErr }, { data: project, error: projErr }] = await Promise.all([
+      supabaseAdmin
+        .from("user_deploy_credentials")
+        .select("vercel_token")
+        .eq("user_id", context.userId)
+        .maybeSingle(),
       context.supabase.from("build_projects").select("name, files, vercel_project_id").eq("id", data.projectId).single(),
     ]);
     if (profErr) throw new Error(profErr.message);
     if (projErr) throw new Error(projErr.message);
-    if (!profile?.vercel_token) throw new Error("Vercel not connected. Add your API token first.");
+    if (!creds?.vercel_token) throw new Error("Vercel not connected. Add your API token first.");
 
     const files = (project.files ?? {}) as Record<string, string>;
     const slug = project.name
