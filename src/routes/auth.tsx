@@ -14,8 +14,8 @@ export const Route = createFileRoute("/auth")({
       { name: "description", content: "Sign in or create your OrbitIntelligenceAI account." },
     ],
   }),
-  validateSearch: (s: Record<string, unknown>) => ({
-    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : "",
+  validateSearch: (s: Record<string, unknown>): { next?: string } => ({
+    next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
   }),
   component: AuthPage,
 });
