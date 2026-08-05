@@ -337,7 +337,7 @@ export const deployToVercel = createServerFn({ method: "POST" })
     const res = await fetch("https://api.vercel.com/v13/deployments", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${profile.vercel_token}`,
+        Authorization: `Bearer ${creds.vercel_token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
