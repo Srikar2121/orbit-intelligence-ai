@@ -155,7 +155,6 @@ export type Database = {
           plan_expires_at: string | null
           updated_at: string
           username: string
-          vercel_token: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -166,7 +165,6 @@ export type Database = {
           plan_expires_at?: string | null
           updated_at?: string
           username: string
-          vercel_token?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -177,6 +175,26 @@ export type Database = {
           plan_expires_at?: string | null
           updated_at?: string
           username?: string
+        }
+        Relationships: []
+      }
+      user_deploy_credentials: {
+        Row: {
+          created_at: string
+          updated_at: string
+          user_id: string
+          vercel_token: string | null
+        }
+        Insert: {
+          created_at?: string
+          updated_at?: string
+          user_id: string
+          vercel_token?: string | null
+        }
+        Update: {
+          created_at?: string
+          updated_at?: string
+          user_id?: string
           vercel_token?: string | null
         }
         Relationships: []
