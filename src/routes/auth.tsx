@@ -160,7 +160,7 @@ function AuthPage() {
 
         {mode === "signup" && (
           <p className="text-[11px] text-muted-foreground mt-3 text-center">
-            You must be at least 9 to create an account.
+            No email needed. You must be at least 9 to create an account — remember your password, it can't be reset by email.
           </p>
         )}
 
