@@ -107,6 +107,7 @@ export const upsertProfile = createServerFn({ method: "POST" })
     z
       .object({
         username: z.string().min(2).max(40),
+        display_name: z.string().min(1).max(60).optional(),
         birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         avatar_url: z.string().url().optional().nullable(),
       })
@@ -116,6 +117,7 @@ export const upsertProfile = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("profiles").upsert({
       id: context.userId,
       username: data.username,
+      display_name: data.display_name ?? data.username,
       birth_date: data.birth_date,
       avatar_url: data.avatar_url ?? null,
     });
