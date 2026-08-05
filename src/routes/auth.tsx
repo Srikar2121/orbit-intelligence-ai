@@ -33,7 +33,7 @@ function ageFrom(date: string): number {
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
-  const dest = safeNext(next, "/chat");
+  const dest = safeNext(next ?? "", "/chat");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
