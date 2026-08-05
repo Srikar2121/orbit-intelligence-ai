@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles, Mail, Lock, User, Calendar, ArrowLeft } from "lucide-react";
+import { Sparkles, IdCard, Lock, User, Calendar, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Blobs } from "@/components/Blobs";
 import { toast } from "sonner";
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in · OrbitIntelligenceAI" },
-      { name: "description", content: "Sign in or create your OrbitIntelligenceAI account." },
+      { name: "description", content: "Sign in or create your OrbitIntelligenceAI account with a username and password." },
     ],
   }),
   validateSearch: (s: Record<string, unknown>): { next?: string } => ({
@@ -30,18 +30,25 @@ function ageFrom(date: string): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
 }
 
+const USERNAME_RE = /^[a-z0-9._-]{2,40}$/;
+function normalizeUsername(raw: string): string {
+  return raw.trim().toLowerCase();
+}
+function usernameEmail(username: string): string {
+  return `${normalizeUsername(username)}@orbitintelligence.local`;
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const { next } = Route.useSearch();
   const dest = safeNext(next ?? "", "/chat");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
   const [birth, setBirth] = useState("");
   const [busy, setBusy] = useState(false);
   const save = useServerFn(upsertProfile);
-
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -52,6 +59,11 @@ function AuthPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy) return;
+    const uname = normalizeUsername(username);
+    if (!USERNAME_RE.test(uname)) {
+      toast.error("Username: 2-40 characters, letters, numbers, . _ - only.");
+      return;
+    }
     setBusy(true);
     try {
       if (mode === "signup") {
@@ -60,27 +72,29 @@ function AuthPage() {
           setBusy(false);
           return;
         }
-        if (username.trim().length < 2) {
-          toast.error("Pick a username (2+ characters).");
+        if (displayName.trim().length < 1) {
+          toast.error("Pick a display name.");
           setBusy(false);
           return;
         }
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: usernameEmail(uname),
           password,
-          options: { emailRedirectTo: `${window.location.origin}${dest}` },
         });
         if (error) throw error;
         if (data.session) {
-          await save({ data: { username: username.trim(), birth_date: birth } });
+          await save({ data: { username: uname, display_name: displayName.trim(), birth_date: birth } });
           toast.success("Welcome to Orbit ✨");
           window.location.href = dest;
         } else {
-          toast.success("Check your email to confirm your account.");
+          toast.error("Could not start your session. Try signing in.");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
+        const { error } = await supabase.auth.signInWithPassword({
+          email: usernameEmail(uname),
+          password,
+        });
+        if (error) throw new Error("Wrong username or password.");
         toast.success("Welcome back 💜");
         window.location.href = dest;
       }
@@ -90,9 +104,6 @@ function AuthPage() {
       setBusy(false);
     }
   };
-
-
-
 
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 mode-genz">
@@ -127,13 +138,13 @@ function AuthPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
+          <Field icon={<User className="h-4 w-4" />} placeholder="Username" value={username} onChange={setUsername} />
           {mode === "signup" && (
             <>
-              <Field icon={<User className="h-4 w-4" />} placeholder="Username" value={username} onChange={setUsername} />
+              <Field icon={<IdCard className="h-4 w-4" />} placeholder="Display name" value={displayName} onChange={setDisplayName} />
               <Field icon={<Calendar className="h-4 w-4" />} placeholder="Date of birth" type="date" value={birth} onChange={setBirth} />
             </>
           )}
-          <Field icon={<Mail className="h-4 w-4" />} placeholder="Email" type="email" value={email} onChange={setEmail} />
           <Field icon={<Lock className="h-4 w-4" />} placeholder="Password" type="password" value={password} onChange={setPassword} />
 
           <button
@@ -145,6 +156,7 @@ function AuthPage() {
             {busy ? "…" : mode === "signin" ? "Sign in" : "Create account"}
           </button>
         </form>
+
 
         {mode === "signup" && (
           <p className="text-[11px] text-muted-foreground mt-3 text-center">
