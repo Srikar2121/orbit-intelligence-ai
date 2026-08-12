@@ -84,7 +84,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "OrbitIntelligenceAI — Your thoughts. Connected. Created by Srikar." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/46aadc94-4b68-4bf8-b17a-e6906bb54f8f/id-preview-39967830--888869f8-79c8-4789-a158-5f517a2ce38c.lovable.app-1778485911854.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/46aadc94-4b68-4bf8-b17a-e6906bb54f8f/id-preview-39967830--888869f8-79c8-4789-a158-5f517a2ce38c.lovable.app-1778485911854.png" },
+      { name: "theme-color", content: "#14101f", media: "(prefers-color-scheme: dark)" },
+      { name: "theme-color", content: "#f6f4fb", media: "(prefers-color-scheme: light)" },
+      { name: "color-scheme", content: "dark light" },
+      { name: "msapplication-TileColor", content: "#7C4DFF" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
     ],
+
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
