@@ -80,20 +80,21 @@
 }
 
 .light {
-  --background: oklch(0.98 0.01 270);
-  --foreground: oklch(0.18 0.03 270);
+  --background: oklch(0.98 0.015 235);
+  --foreground: oklch(0.17 0.045 264);
   --card: oklch(1 0 0 / 70%);
-  --card-foreground: oklch(0.18 0.03 270);
+  --card-foreground: oklch(0.17 0.045 264);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.03 270);
-  --secondary: oklch(0.95 0.02 270);
-  --secondary-foreground: oklch(0.18 0.03 270);
-  --muted: oklch(0.95 0.02 270);
-  --muted-foreground: oklch(0.45 0.03 270);
-  --border: oklch(0.18 0.03 270 / 12%);
-  --input: oklch(0.18 0.03 270 / 12%);
+  --popover-foreground: oklch(0.17 0.045 264);
+  --secondary: oklch(0.95 0.03 235);
+  --secondary-foreground: oklch(0.17 0.045 264);
+  --muted: oklch(0.95 0.025 235);
+  --muted-foreground: oklch(0.45 0.04 250);
+  --border: oklch(0.5 0.12 235 / 18%);
+  --input: oklch(0.5 0.12 235 / 16%);
   --glass-bg: oklch(1 0 0 / 70%);
-  --glass-border: oklch(0.18 0.03 270 / 10%);
+  --glass-border: oklch(0.5 0.12 235 / 14%);
+  --gradient-text: linear-gradient(135deg, #4b5ff0, #0aa8d6 55%, #00c2d1);
 }
 
 @layer base {
