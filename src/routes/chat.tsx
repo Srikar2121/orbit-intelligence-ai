@@ -448,8 +448,11 @@ function ChatPage() {
         cacheControl: "3600", upsert: true, contentType: file.type,
       });
       if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
-      const url = `${pub.publicUrl}?v=${Date.now()}`;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("avatars")
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (signErr || !signed?.signedUrl) throw signErr ?? new Error("Could not read avatar");
+      const url = `${signed.signedUrl}&v=${Date.now()}`;
       await avatarFn({ data: { avatar_url: url } });
       setProfile((p) => ({ username: p?.username ?? null, avatar_url: url }));
       toast.success("Avatar updated ✨");
