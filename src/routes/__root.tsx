@@ -128,6 +128,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeColorSync />
       <Outlet />
     </QueryClientProvider>
   );
