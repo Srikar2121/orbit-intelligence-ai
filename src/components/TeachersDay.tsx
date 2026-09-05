@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { Video, Calendar, Sparkles, ArrowRight } from "lucide-react";
 
 export function TeachersDay() {
-  const meetLink = "https://meet.google.com/smh-tzwv-tvw";
+  const meetLink = "https://meet.google.com/joi-zkhe-bne";
 
   return (
     <section className="relative px-4 sm:px-6 py-16 sm:py-24">
@@ -63,7 +63,7 @@ export function TeachersDay() {
                 style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
               >
                 <Calendar className="h-4 w-4 text-cyan-accent" />
-                <span className="text-foreground/90">meet.google.com/smh-tzwv-tvw</span>
+                <span className="text-foreground/90">meet.google.com/joi-zkhe-bne</span>
               </div>
             </div>
           </div>
