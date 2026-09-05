@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Blobs } from "@/components/Blobs";
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
+import { TeachersDay } from "@/components/TeachersDay";
 import { Footer } from "@/components/Footer";
 import { Onboarding } from "@/components/Onboarding";
 import { PrivacyPopup } from "@/components/PrivacyPopup";
