@@ -32,6 +32,7 @@ function Index() {
       <Navbar mode={mode} onModeChange={setMode} />
       <main>
         <Hero />
+        <TeachersDay />
       </main>
       <Footer />
       <Onboarding />
