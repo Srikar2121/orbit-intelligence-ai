@@ -145,37 +145,153 @@ export type Database = {
         }
         Relationships: []
       }
+      event_reminder_log: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          recipient_email: string
+          send_date: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          recipient_email: string
+          send_date: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          recipient_email?: string
+          send_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_reminder_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "portal_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portal_events: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          ends_at: string | null
+          id: string
+          meet_url: string | null
+          remind_daily: boolean
+          remind_until: string | null
+          starts_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          meet_url?: string | null
+          remind_daily?: boolean
+          remind_until?: string | null
+          starts_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          meet_url?: string | null
+          remind_daily?: boolean
+          remind_until?: string | null
+          starts_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      portal_posts: {
+        Row: {
+          author_id: string
+          body: string
+          category: string
+          created_at: string
+          id: string
+          link_url: string | null
+          pinned: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          link_url?: string | null
+          pinned?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          link_url?: string | null
+          pinned?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           birth_date: string
+          contact_email: string | null
           created_at: string
           display_name: string | null
           id: string
           plan: string
           plan_expires_at: string | null
+          reminders_enabled: boolean
           updated_at: string
           username: string
         }
         Insert: {
           avatar_url?: string | null
           birth_date: string
+          contact_email?: string | null
           created_at?: string
           display_name?: string | null
           id: string
           plan?: string
           plan_expires_at?: string | null
+          reminders_enabled?: boolean
           updated_at?: string
           username: string
         }
         Update: {
           avatar_url?: string | null
           birth_date?: string
+          contact_email?: string | null
           created_at?: string
           display_name?: string | null
           id?: string
           plan?: string
           plan_expires_at?: string | null
+          reminders_enabled?: boolean
           updated_at?: string
           username?: string
         }
@@ -202,6 +318,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -224,10 +361,17 @@ export type Database = {
           used: number
         }[]
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       is_unlimited_user: { Args: { _uid: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "teacher" | "student"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -354,6 +498,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "teacher", "student"],
+    },
   },
 } as const
