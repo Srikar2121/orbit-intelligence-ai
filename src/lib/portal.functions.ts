@@ -153,3 +153,152 @@ export const deleteEvent = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---------- AI teacher assistant ----------
+
+async function callOrbit(system: string, user: string, json = false) {
+  const apiKey = process.env['LOVABLE_API_KEY'];
+  if (!apiKey) throw new Error("AI is not configured.");
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: "google/gemini-3.6-flash",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      ...(json ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    if (res.status === 429) throw new Error("The assistant is busy right now — try again in a moment.");
+    if (res.status === 402) throw new Error("AI credits are exhausted. Add credits to keep using the assistant.");
+    console.error("Teacher bot gateway error", res.status, text);
+    throw new Error("The assistant could not answer right now.");
+  }
+  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  return data.choices?.[0]?.message?.content ?? "";
+}
+
+async function assertTeacher(supabase: any, userId: string) {
+  const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId).eq("role", "teacher");
+  if (!data || data.length === 0) throw new Error("Teachers only.");
+}
+
+const TEACHER_SYSTEM =
+  "You are Orbit Teach — an expert teaching assistant for school teachers. You write lesson plans, unit plans, worksheets, quizzes with answer keys, rubrics, differentiated activities, parent emails, IEP-friendly adaptations and classroom-management ideas. Always be practical, curriculum-aware and ready to use in class. Use clean markdown with headings, tables and bullet lists. Include objectives, materials, timings, steps, differentiation and assessment whenever you write a plan.";
+
+export const askTeacherBot = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        prompt: z.string().min(1).max(6000),
+        history: z
+          .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(8000) }))
+          .max(20)
+          .default([]),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertTeacher(context.supabase, context.userId);
+    const transcript = data.history.map((m) => `${m.role === "user" ? "Teacher" : "Orbit Teach"}: ${m.content}`).join("\n\n");
+    const user = transcript ? `${transcript}\n\nTeacher: ${data.prompt}` : data.prompt;
+    return { reply: await callOrbit(TEACHER_SYSTEM, user) };
+  });
+
+// ---------- Grading simulator ----------
+
+export const gradeSubmission = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        studentName: z.string().min(1).max(120),
+        assignment: z.string().min(1).max(200),
+        subject: z.string().max(120).optional(),
+        rubric: z.string().max(6000).optional(),
+        submission: z.string().min(1).max(20000),
+        maxScore: z.number().min(1).max(1000).default(100),
+        save: z.boolean().default(true),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertTeacher(context.supabase, context.userId);
+
+    const raw = await callOrbit(
+      "You are a fair, experienced grader. Grade the student's submission against the rubric (or against general subject standards if no rubric is given). Respond ONLY with JSON of the shape {\"score\": number, \"letter\": string, \"strengths\": string, \"improvements\": string, \"feedback\": string}. score is out of the given maximum. feedback is warm, specific, student-facing markdown.",
+      JSON.stringify({
+        assignment: data.assignment,
+        subject: data.subject ?? "",
+        maxScore: data.maxScore,
+        rubric: data.rubric ?? "",
+        submission: data.submission,
+      }),
+      true,
+    );
+
+    let parsedResult: { score: number; letter: string; strengths?: string; improvements?: string; feedback: string };
+    try {
+      const cleaned = raw.trim().replace(/^```json/i, "").replace(/^```/, "").replace(/```$/, "");
+      const obj = JSON.parse(cleaned);
+      parsedResult = {
+        score: Math.max(0, Math.min(Number(obj.score) || 0, data.maxScore)),
+        letter: String(obj.letter ?? ""),
+        strengths: obj.strengths ? String(obj.strengths) : undefined,
+        improvements: obj.improvements ? String(obj.improvements) : undefined,
+        feedback: String(obj.feedback ?? raw),
+      };
+    } catch {
+      parsedResult = { score: 0, letter: "", feedback: raw };
+    }
+
+    const fullFeedback = [
+      parsedResult.feedback,
+      parsedResult.strengths ? `\n\n**Strengths**\n${parsedResult.strengths}` : "",
+      parsedResult.improvements ? `\n\n**Next steps**\n${parsedResult.improvements}` : "",
+    ].join("");
+
+    if (data.save) {
+      const { error } = await context.supabase.from("portal_grades").insert({
+        teacher_id: context.userId,
+        student_name: data.studentName,
+        assignment: data.assignment,
+        subject: data.subject ?? null,
+        rubric: data.rubric ?? null,
+        submission: data.submission,
+        score: parsedResult.score,
+        max_score: data.maxScore,
+        letter: parsedResult.letter || null,
+        feedback: fullFeedback,
+      });
+      if (error) throw new Error(error.message);
+    }
+
+    return { ...parsedResult, feedback: fullFeedback, maxScore: data.maxScore };
+  });
+
+export const listGrades = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("portal_grades")
+      .select("id, student_name, assignment, subject, score, max_score, letter, feedback, created_at")
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const deleteGrade = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("portal_grades").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
