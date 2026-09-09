@@ -219,6 +219,51 @@ export type Database = {
         }
         Relationships: []
       }
+      portal_grades: {
+        Row: {
+          assignment: string
+          created_at: string
+          feedback: string | null
+          id: string
+          letter: string | null
+          max_score: number
+          rubric: string | null
+          score: number
+          student_name: string
+          subject: string | null
+          submission: string | null
+          teacher_id: string
+        }
+        Insert: {
+          assignment: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          letter?: string | null
+          max_score?: number
+          rubric?: string | null
+          score?: number
+          student_name: string
+          subject?: string | null
+          submission?: string | null
+          teacher_id: string
+        }
+        Update: {
+          assignment?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          letter?: string | null
+          max_score?: number
+          rubric?: string | null
+          score?: number
+          student_name?: string
+          subject?: string | null
+          submission?: string | null
+          teacher_id?: string
+        }
+        Relationships: []
+      }
       portal_posts: {
         Row: {
           author_id: string
