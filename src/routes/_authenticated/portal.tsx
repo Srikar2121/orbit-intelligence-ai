@@ -13,8 +13,14 @@ import {
   Trash2,
   Video,
   Mail,
+  Sparkles,
+  ClipboardCheck,
+  HardDrive,
 } from "lucide-react";
 import { Blobs } from "@/components/Blobs";
+import { TeacherBot } from "@/components/portal/TeacherBot";
+import { GradingSimulator } from "@/components/portal/GradingSimulator";
+import { TeacherStorage } from "@/components/portal/TeacherStorage";
 import {
   getPortal,
   joinAsTeacher,
