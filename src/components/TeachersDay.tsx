@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Video, Calendar, Sparkles, ArrowRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Video, Calendar, Sparkles, ArrowRight, GraduationCap } from "lucide-react";
 
 export function TeachersDay() {
   const meetLink = "https://meet.google.com/joi-zkhe-bne";
@@ -58,13 +59,34 @@ export function TeachersDay() {
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition" />
               </a>
 
-              <div
-                className="inline-flex items-center gap-2 rounded-2xl px-5 py-4 text-sm font-medium"
+              <Link
+                to="/portal"
+                className="group inline-flex items-center gap-3 rounded-2xl px-7 py-4 font-semibold hover:bg-white/10 transition"
                 style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
               >
-                <Calendar className="h-4 w-4 text-cyan-accent" />
-                <span className="text-foreground/90">meet.google.com/joi-zkhe-bne</span>
-              </div>
+                <GraduationCap className="h-5 w-5 text-cyan-accent" />
+                Open Teachers' Portal
+                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition" />
+              </Link>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+              <span
+                className="inline-flex items-center gap-2 rounded-xl px-3 py-2"
+                style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+              >
+                <Calendar className="h-3.5 w-3.5 text-cyan-accent" />
+                meet.google.com/joi-zkhe-bne
+              </span>
+              {["Orbit Teach assistant", "Grading simulator", "Lesson plans & resources", "Private storage"].map((f) => (
+                <span
+                  key={f}
+                  className="rounded-xl px-3 py-2"
+                  style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
+                >
+                  {f}
+                </span>
+              ))}
             </div>
           </div>
         </motion.div>

@@ -13,8 +13,14 @@ import {
   Trash2,
   Video,
   Mail,
+  Sparkles,
+  ClipboardCheck,
+  HardDrive,
 } from "lucide-react";
 import { Blobs } from "@/components/Blobs";
+import { TeacherBot } from "@/components/portal/TeacherBot";
+import { GradingSimulator } from "@/components/portal/GradingSimulator";
+import { TeacherStorage } from "@/components/portal/TeacherStorage";
 import {
   getPortal,
   joinAsTeacher,
@@ -39,13 +45,16 @@ export const Route = createFileRoute("/_authenticated/portal")({
   component: PortalPage,
 });
 
-type Tab = "announcement" | "lesson_plan" | "resource" | "calendar";
+type Tab = "announcement" | "lesson_plan" | "resource" | "calendar" | "bot" | "grading" | "storage";
 
 const TABS: { id: Tab; label: string; icon: any }[] = [
   { id: "announcement", label: "Announcements", icon: Megaphone },
   { id: "lesson_plan", label: "Lesson plans", icon: BookOpen },
   { id: "resource", label: "Resources", icon: Files },
   { id: "calendar", label: "Calendar", icon: CalendarDays },
+  { id: "bot", label: "Orbit Teach", icon: Sparkles },
+  { id: "grading", label: "Grading", icon: ClipboardCheck },
+  { id: "storage", label: "Storage", icon: HardDrive },
 ];
 
 type PortalData = Awaited<ReturnType<typeof getPortal>>;
@@ -129,7 +138,13 @@ function PortalPage() {
         })}
       </div>
 
-      {tab === "calendar" ? (
+      {tab === "bot" ? (
+        <TeacherBot />
+      ) : tab === "grading" ? (
+        <GradingSimulator />
+      ) : tab === "storage" ? (
+        <TeacherStorage />
+      ) : tab === "calendar" ? (
         <CalendarTab
           events={data.events}
           profile={data.profile}
