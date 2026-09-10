@@ -138,7 +138,13 @@ function PortalPage() {
         })}
       </div>
 
-      {tab === "calendar" ? (
+      {tab === "bot" ? (
+        <TeacherBot />
+      ) : tab === "grading" ? (
+        <GradingSimulator />
+      ) : tab === "storage" ? (
+        <TeacherStorage />
+      ) : tab === "calendar" ? (
         <CalendarTab
           events={data.events}
           profile={data.profile}
