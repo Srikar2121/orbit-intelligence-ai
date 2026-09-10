@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Video, Calendar, Sparkles, ArrowRight } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Video, Calendar, Sparkles, ArrowRight, GraduationCap } from "lucide-react";
 
 export function TeachersDay() {
   const meetLink = "https://meet.google.com/joi-zkhe-bne";
