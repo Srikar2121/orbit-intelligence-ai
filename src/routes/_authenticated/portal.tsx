@@ -100,15 +100,20 @@ function PortalPage() {
           onJoin={async (email) => {
             setBusy(true);
             try {
-              await join({ data: { contactEmail: email } });
-              toast.success("You're in — welcome, teacher ✨");
+              const res = await join({ data: { contactEmail: email } });
+              if (res?.status === "approved") {
+                toast.success("You're in — welcome, teacher ✨");
+              } else {
+                toast.success("Request sent — an admin will approve your teacher access.");
+              }
               await refresh();
             } catch (e) {
-              toast.error(e instanceof Error ? e.message : "Could not join.");
+              toast.error(e instanceof Error ? e.message : "Could not send your request.");
             } finally {
               setBusy(false);
             }
           }}
+
         />
       </Shell>
     );
