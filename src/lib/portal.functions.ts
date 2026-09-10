@@ -43,18 +43,22 @@ export const joinAsTeacher = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error: roleErr } = await supabase
-      .from("user_roles")
-      .upsert({ user_id: userId, role: "teacher" }, { onConflict: "user_id,role" });
-    if (roleErr) throw new Error(roleErr.message);
+    const email = data.contactEmail.trim().toLowerCase();
+
+    const { data: status, error: reqErr } = await supabase.rpc("request_teacher_access", {
+      _contact_email: email,
+    });
+    if (reqErr) throw new Error(reqErr.message);
 
     const { error: profErr } = await supabase
       .from("profiles")
-      .update({ contact_email: data.contactEmail.trim().toLowerCase(), reminders_enabled: true })
+      .update({ contact_email: email, reminders_enabled: true })
       .eq("id", userId);
     if (profErr) throw new Error(profErr.message);
-    return { ok: true };
+
+    return { ok: true, status: (status as string) ?? "pending" };
   });
+
 
 export const updateReminderPrefs = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
