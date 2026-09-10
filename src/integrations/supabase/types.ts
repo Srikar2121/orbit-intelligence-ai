@@ -342,6 +342,36 @@ export type Database = {
         }
         Relationships: []
       }
+      teacher_access_requests: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_deploy_credentials: {
         Row: {
           created_at: string
@@ -406,6 +436,10 @@ export type Database = {
           used: number
         }[]
       }
+      decide_teacher_access: {
+        Args: { _approve: boolean; _user_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -414,6 +448,10 @@ export type Database = {
         Returns: boolean
       }
       is_unlimited_user: { Args: { _uid: string }; Returns: boolean }
+      request_teacher_access: {
+        Args: { _contact_email: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student"
