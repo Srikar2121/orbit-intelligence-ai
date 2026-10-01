@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { Sparkles, Sun, Moon, Brain, Zap, Code2 } from "lucide-react";
+import { Sun, Moon, Brain, Zap, Code2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import logoAsset from "@/assets/orbit-logo.png.asset.json";
 
 type Mode = "default" | "genz" | "codey";
 
@@ -23,8 +24,8 @@ export function Navbar({ mode = "genz", onModeChange }: Props) {
       <div className="mx-auto max-w-7xl px-3 sm:px-6 pt-3 sm:pt-4">
         <nav className="glass rounded-2xl px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2 sm:gap-3">
           <Link to="/" className="flex items-center gap-2 group min-w-0 shrink">
-            <div className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-xl grid place-items-center neon-glow" style={{ background: 'var(--gradient-neon)' }}>
-              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+            <div className="relative h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-xl overflow-hidden neon-glow" style={{ background: 'var(--gradient-neon)' }}>
+              <img src={logoAsset.url} alt="OrbitIntelligenceAI logo" className="h-full w-full object-cover" />
             </div>
             <div className="leading-tight min-w-0">
               <div className="font-display text-sm sm:text-lg font-bold gradient-text truncate">
