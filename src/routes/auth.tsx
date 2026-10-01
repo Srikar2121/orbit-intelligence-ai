@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Sparkles, IdCard, Lock, User, Calendar, ArrowLeft } from "lucide-react";
+import { IdCard, Lock, User, Calendar, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Blobs } from "@/components/Blobs";
 import logoAsset from "@/assets/orbit-logo.png.asset.json";
