@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import logoAsset from "@/assets/orbit-logo.png.asset.json";
 import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -565,8 +566,8 @@ function ChatPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl grid place-items-center neon-glow" style={{ background: 'var(--gradient-neon)' }}>
-                <Sparkles className="h-4 w-4 text-white" />
+              <div className="h-8 w-8 rounded-xl overflow-hidden neon-glow" style={{ background: 'var(--gradient-neon)' }}>
+                <img src={logoAsset.url} alt="OrbitIntelligenceAI" className="h-full w-full object-cover" />
               </div>
               <div className="leading-tight">
                 <div className="text-sm font-bold gradient-text">OrbitIntelligenceAI</div>
