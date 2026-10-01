@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Blobs } from "@/components/Blobs";
 import { Navbar } from "@/components/Navbar";
 import { Hero } from "@/components/Hero";
-import { TeachersDay } from "@/components/TeachersDay";
+import { Dusshera } from "@/components/Dusshera";
 import { Footer } from "@/components/Footer";
 import { Onboarding } from "@/components/Onboarding";
 import { PrivacyPopup } from "@/components/PrivacyPopup";
@@ -32,7 +32,7 @@ function Index() {
       <Navbar mode={mode} onModeChange={setMode} />
       <main>
         <Hero />
-        <TeachersDay />
+        <Dusshera />
       </main>
       <Footer />
       <Onboarding />
