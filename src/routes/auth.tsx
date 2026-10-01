@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Sparkles, IdCard, Lock, User, Calendar, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Blobs } from "@/components/Blobs";
+import logoAsset from "@/assets/orbit-logo.png.asset.json";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
 import { upsertProfile } from "@/lib/chat.functions";
@@ -113,8 +114,8 @@ function AuthPage() {
       </Link>
       <div className="glass gradient-border rounded-3xl p-6 sm:p-8 w-full max-w-md">
         <div className="flex items-center gap-2 mb-6">
-          <div className="h-10 w-10 rounded-xl grid place-items-center neon-glow" style={{ background: "var(--gradient-neon)" }}>
-            <Sparkles className="h-5 w-5 text-white" />
+          <div className="h-10 w-10 rounded-xl overflow-hidden neon-glow" style={{ background: "var(--gradient-neon)" }}>
+            <img src={logoAsset.url} alt="OrbitIntelligenceAI logo" className="h-full w-full object-cover" />
           </div>
           <div>
             <div className="font-bold gradient-text text-lg">OrbitIntelligenceAI</div>
