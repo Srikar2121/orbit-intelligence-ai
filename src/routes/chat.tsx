@@ -2,11 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2,
+  Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2,
   Rocket, Lock, X, Paperclip, Image as ImageIcon, User as UserIcon, Camera, Gamepad2,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import logoAsset from "@/assets/orbit-logo.png.asset.json";
 import { Blobs } from "@/components/Blobs";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -565,8 +566,8 @@ function ChatPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-xl grid place-items-center neon-glow" style={{ background: 'var(--gradient-neon)' }}>
-                <Sparkles className="h-4 w-4 text-white" />
+              <div className="h-8 w-8 rounded-xl overflow-hidden neon-glow" style={{ background: 'var(--gradient-neon)' }}>
+                <img src={logoAsset.url} alt="OrbitIntelligenceAI" className="h-full w-full object-cover" />
               </div>
               <div className="leading-tight">
                 <div className="text-sm font-bold gradient-text">OrbitIntelligenceAI</div>
@@ -686,8 +687,8 @@ function ChatPage() {
         <section className="glass rounded-2xl flex flex-col min-h-0 gradient-border">
           {!started && (
             <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 text-center">
-              <div className="h-16 w-16 rounded-3xl grid place-items-center neon-glow" style={{ background: "var(--gradient-neon)" }}>
-                <Sparkles className="h-8 w-8 text-white" />
+              <div className="h-16 w-16 rounded-3xl overflow-hidden neon-glow" style={{ background: "var(--gradient-neon)" }}>
+                <img src={logoAsset.url} alt="OrbitIntelligenceAI" className="h-full w-full object-cover" />
               </div>
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold gradient-text">{WELCOME[mode]}</h1>
@@ -706,8 +707,8 @@ function ChatPage() {
                   initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}
                   className={`flex gap-3 ${m.role === 'user' ? 'justify-end' : ''}`}>
                   {m.role === 'ai' && (
-                    <div className="h-8 w-8 rounded-xl grid place-items-center shrink-0 neon-glow" style={{ background: 'var(--gradient-neon)' }}>
-                      <Sparkles className="h-4 w-4 text-white" />
+                    <div className="h-8 w-8 rounded-xl overflow-hidden shrink-0 neon-glow" style={{ background: 'var(--gradient-neon)' }}>
+                      <img src={logoAsset.url} alt="Orbit AI" className="h-full w-full object-cover" />
                     </div>
                   )}
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
