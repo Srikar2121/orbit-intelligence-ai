@@ -56,13 +56,14 @@ export function Dusshera() {
                 <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition" />
               </Link>
 
-              <div
-                className="inline-flex items-center gap-3 rounded-2xl px-7 py-4 font-semibold"
+              <Link
+                to="/dussehra"
+                className="inline-flex items-center gap-3 rounded-2xl px-7 py-4 font-semibold hover:bg-white/10 transition"
                 style={{ background: "var(--glass-bg)", border: "1px solid var(--glass-border)" }}
               >
                 <BowArrow className="h-5 w-5 text-orange-400" />
-                Aim big. Think bigger.
-              </div>
+                Enter the Dussehra Portal
+              </Link>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
