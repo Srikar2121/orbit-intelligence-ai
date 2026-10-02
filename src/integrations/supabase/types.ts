@@ -94,11 +94,45 @@ export type Database = {
           },
         ]
       }
+      chat_projects: {
+        Row: {
+          context: string | null
+          created_at: string
+          description: string | null
+          icon: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_threads: {
         Row: {
           created_at: string
           id: string
           mode: string
+          project_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -107,6 +141,7 @@ export type Database = {
           created_at?: string
           id?: string
           mode?: string
+          project_id?: string | null
           title?: string
           updated_at?: string
           user_id: string
@@ -115,11 +150,20 @@ export type Database = {
           created_at?: string
           id?: string
           mode?: string
+          project_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chat_threads_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "chat_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       chat_usage: {
         Row: {
@@ -390,6 +434,27 @@ export type Database = {
           updated_at?: string
           user_id?: string
           vercel_token?: string | null
+        }
+        Relationships: []
+      }
+      user_plugins: {
+        Row: {
+          enabled: string[]
+          settings: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          enabled?: string[]
+          settings?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          enabled?: string[]
+          settings?: Json
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

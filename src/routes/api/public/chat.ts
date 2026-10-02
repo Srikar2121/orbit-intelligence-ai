@@ -49,6 +49,8 @@ const bodySchema = z.object({
   model: z.enum(["rapid", "lite", "proman"]).default("rapid"),
   effort: z.enum(["low", "medium", "high"]).default("medium"),
   memory: z.string().max(6000).optional(),
+  projectContext: z.string().max(5000).optional(),
+  pluginResults: z.string().max(6000).optional(),
 });
 
 
@@ -115,6 +117,12 @@ export const Route = createFileRoute("/api/public/chat")({
             EFFORT_PROMPT[effort] +
             (token && memory
               ? `\n\nLong-term memory of earlier conversations with this user (use it naturally, don't recite it):\n${memory}`
+              : "") +
+            (parsed.projectContext
+              ? `\n\nThe user is working inside a project. Project info and instructions (follow them):\n${parsed.projectContext}`
+              : "") +
+            (parsed.pluginResults
+              ? `\n\nLive plugin results gathered for the latest message (treat as fresh, accurate data and use it in your answer):\n${parsed.pluginResults}`
               : "");
 
           const response = await fetch(
