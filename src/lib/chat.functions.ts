@@ -7,9 +7,9 @@ export const listThreads = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("chat_threads")
-      .select("id, title, mode, updated_at")
+      .select("id, title, mode, updated_at, project_id")
       .order("updated_at", { ascending: false })
-      .limit(100);
+      .limit(200);
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -17,13 +17,19 @@ export const listThreads = createServerFn({ method: "GET" })
 export const createThread = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ title: z.string().min(1).max(80).default("New chat"), mode: z.enum(["default", "genz", "codey"]) }).parse(d),
+    z
+      .object({
+        title: z.string().min(1).max(80).default("New chat"),
+        mode: z.enum(["default", "genz", "codey"]),
+        projectId: z.string().uuid().nullable().optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { data: row, error } = await context.supabase
       .from("chat_threads")
-      .insert({ user_id: context.userId, title: data.title, mode: data.mode })
-      .select("id, title, mode, updated_at")
+      .insert({ user_id: context.userId, title: data.title, mode: data.mode, project_id: data.projectId ?? null })
+      .select("id, title, mode, updated_at, project_id")
       .single();
     if (error) throw new Error(error.message);
     return row;
