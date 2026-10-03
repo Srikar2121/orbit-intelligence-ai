@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Plus, ArrowLeft, Menu, Brain, Zap, Code2, LogOut, Trash2,
   Rocket, Lock, X, Paperclip, Image as ImageIcon, User as UserIcon, Camera, Gamepad2,
+  Puzzle, PanelRight, Pencil, ChevronRight,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -16,6 +17,10 @@ import {
 } from "@/lib/chat.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useWorkspace, localChats, type Project } from "@/lib/workspace-store";
+import { PLUGINS, runPlugins } from "@/lib/plugins";
+import { PluginsModal } from "@/components/workspace/PluginsModal";
+import { ProjectDialog } from "@/components/workspace/ProjectDialog";
 
 
 type Mode = "default" | "genz" | "codey";
@@ -58,16 +63,17 @@ type Msg = {
   text: string;
   image?: string;          // data URL for generated / attached image
   imageLoading?: boolean;  // apply blur while streaming partials
+  activity?: string;       // plugin activity label while running
+  plugins?: string[];      // plugins used for this reply
 };
 
 const WELCOME: Record<Mode, string> = {
   default: "Hi. I'm OrbitIntelligenceAI in Default mode — precise, structured, nerd-approved. What can I analyze for you?",
   genz: "hey 💜 orbit here in Gen-Z mode — casual but actually useful. what are we figuring out?",
   codey: "OrbitIntelligence online. Codey mode — your lightweight coding buddy. Snippets, fixes, quick explains. Need a full app? Head to Build Mode 🚀",
-  
 };
 
-type Thread = { id: string; title: string; mode: string; updated_at: string };
+type Thread = { id: string; title: string; mode: string; updated_at: string; project_id: string | null };
 
 const MAX_FILE_BYTES = 200_000; // 200KB per attached code/text file
 const TEXT_EXT = /\.(txt|md|json|ya?ml|toml|xml|csv|tsv|log|env|gitignore|html?|css|scss|sass|less|js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|kt|swift|c|h|cc|cpp|hpp|cs|php|sh|bash|zsh|fish|sql|prisma|graphql|gql|vue|svelte|astro|lua|dart|ex|exs|erl|elm|hs|ml|nim|r|scala|clj|cljs|edn|proto|dockerfile|makefile|ini|conf)$/i;
@@ -103,6 +109,16 @@ function ChatPage() {
   const [orbitModel, setOrbitModel] = useState<OrbitModel>("rapid");
   const [effort, setEffort] = useState<Effort>("medium");
   const [memory, setMemory] = useState<string>("");
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [pluginsOpen, setPluginsOpen] = useState(false);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [projectDialog, setProjectDialog] = useState<{ open: boolean; editing: Project | null }>({ open: false, editing: null });
+  const [confirmDelete, setConfirmDelete] = useState<Project | null>(null);
+  const { projects, addProject, editProject, removeProject, plugins, setPlugins } = useWorkspace(authed);
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
+  const activePlugins = PLUGINS.filter((p) => plugins.enabled.includes(p.id));
+  const visibleThreads = activeProjectId ? threads.filter((t) => t.project_id === activeProjectId) : threads;
+  const activeThread = threads.find((t) => t.id === activeId) ?? null;
   const memoryFn = useServerFn(getMemory);
   const awardFn = useServerFn(awardGameCredits);
   const scroller = useRef<HTMLDivElement>(null);
@@ -134,6 +150,11 @@ function ChatPage() {
   }, [input]);
 
   const refreshThreads = useCallback(async () => {
+    if (authed === false) {
+      const rows = localChats.list();
+      setThreads(rows);
+      return rows;
+    }
     try {
       const rows = await list();
       setThreads(rows as Thread[]);
@@ -141,17 +162,19 @@ function ChatPage() {
     } catch {
       return [];
     }
-  }, [list]);
+  }, [list, authed]);
 
-  useEffect(() => { if (authed) refreshThreads(); }, [authed, refreshThreads]);
+  useEffect(() => { if (authed !== null) refreshThreads(); }, [authed, refreshThreads]);
 
 
   const openThread = async (id: string) => {
     setActiveId(id);
     const t = threads.find((x) => x.id === id);
-    if (t) setMode(t.mode as Mode);
+    if (t) { setMode(t.mode as Mode); setActiveProjectId(t.project_id ?? null); }
     try {
-      const rows = (await load({ data: { threadId: id } })) as { id: string; role: "user" | "assistant"; content: string }[];
+      const rows = authed
+        ? ((await load({ data: { threadId: id } })) as { id: string; role: "user" | "assistant"; content: string }[])
+        : localChats.load(id);
       setMessages(
         rows.length
           ? rows.map((r) => ({ id: r.id, role: r.role === "assistant" ? "ai" : "user", text: r.content }))
@@ -167,9 +190,15 @@ function ChatPage() {
     setMessages([{ id: "w" + Date.now(), role: "ai", text: WELCOME[m] }]);
   };
 
+  const openProject = (id: string | null) => {
+    setActiveProjectId(id);
+    newChat(mode);
+  };
+
   const removeThread = async (id: string) => {
     try {
-      await remove({ data: { id } });
+      if (authed) await remove({ data: { id } });
+      else localChats.remove(id);
       if (activeId === id) newChat(mode);
       setThreads((t) => t.filter((x) => x.id !== id));
     } catch {
@@ -199,7 +228,7 @@ function ChatPage() {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    navigate({ to: "/auth" });
+    window.location.reload();
   };
 
   // ---------- File attach (code/text files -> inline fenced block) ----------
@@ -242,7 +271,12 @@ function ChatPage() {
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const accessToken = sessionData.session?.access_token;
-      if (!accessToken) { navigate({ to: "/auth" }); return; }
+      if (!accessToken) {
+        setMessages((m) => m.map((x) => x.id === aiId
+          ? { ...x, text: "🖼️ Image generation is only available on Orbit accounts right now.", imageLoading: false }
+          : x));
+        return;
+      }
 
       const resp = await fetch("/api/public/image", {
         method: "POST",
@@ -342,9 +376,11 @@ function ChatPage() {
     }
 
     let threadId = activeId;
-    if (!isGuest && !threadId) {
+    if (!threadId) {
       try {
-        const t = (await create({ data: { title: text.slice(0, 60), mode } })) as Thread;
+        const t = isGuest
+          ? localChats.create(text.slice(0, 60), mode, activeProjectId)
+          : ((await create({ data: { title: text.slice(0, 60), mode, projectId: activeProjectId } })) as Thread);
         threadId = t.id;
         setActiveId(t.id);
         setThreads((prev) => [t, ...prev]);
@@ -360,9 +396,28 @@ function ChatPage() {
     setInput("");
     setTyping(true);
 
-    if (!isGuest && threadId) save({ data: { threadId, role: "user", content: text } }).catch(() => {});
+    const persist = (role: "user" | "assistant", content: string) => {
+      if (!threadId) return;
+      if (isGuest) localChats.save(threadId, role, content);
+      else save({ data: { threadId, role, content } }).catch(() => {});
+    };
+    persist("user", text);
 
     try {
+      // Run matching plugins first, showing their activity inline.
+      const runs = await runPlugins(text, plugins.enabled, plugins.settings, (p) =>
+        setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, activity: p.activity } : x))),
+      );
+      const used = runs.filter((r) => r.result);
+      const pluginResults = used.map((r) => `[${r.plugin.name}] ${r.result}`).join("\n").slice(0, 6000) || undefined;
+      setMessages((m) => m.map((x) => (x.id === aiId
+        ? { ...x, activity: undefined, plugins: used.map((r) => `${r.plugin.icon} ${r.plugin.name}`) }
+        : x)));
+
+      const projectContext = activeProject
+        ? `Project: ${activeProject.name}${activeProject.description ? `\nDescription: ${activeProject.description}` : ""}${activeProject.context ? `\nContext: ${activeProject.context}` : ""}`.slice(0, 5000)
+        : undefined;
+
       const history = [...messages, userMsg]
         .filter((m) => !m.id.startsWith("w") && !m.id.startsWith("sys") && !m.id.startsWith("img"))
         .map((m) => ({ role: m.role === "ai" ? "assistant" : "user", content: m.text }));
@@ -375,7 +430,7 @@ function ChatPage() {
           "Content-Type": "application/json",
           ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({ messages: history, mode, model: orbitModel, effort, memory: memory || undefined }),
+        body: JSON.stringify({ messages: history, mode, model: orbitModel, effort, memory: memory || undefined, projectContext, pluginResults }),
       });
 
 
@@ -418,14 +473,14 @@ function ChatPage() {
         }
       }
 
-      if (acc && !isGuest && threadId) {
-        save({ data: { threadId, role: "assistant", content: acc } }).catch(() => {});
+      if (acc) {
+        persist("assistant", acc);
         refreshThreads();
       }
 
     } catch (e) {
       console.error(e);
-      setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, text: "⚠️ Network error. Try again." } : x)));
+      setMessages((m) => m.map((x) => (x.id === aiId ? { ...x, text: "⚠️ Network error. Try again.", activity: undefined } : x)));
     } finally {
       setTyping(false);
     }
@@ -543,9 +598,7 @@ function ChatPage() {
         </button>
       </div>
       <div className="text-center text-[10px] text-muted-foreground mt-2">
-        {authed === false
-          ? "You're chatting as a guest — this conversation won't be saved."
-          : "OrbitIntelligence can make mistakes. Double check important info."}{" "}
+        OrbitIntelligence can make mistakes. Double check important info.{" "}
         Created by <span className="gradient-text font-semibold">Srikar</span>.
       </div>
     </div>
@@ -620,80 +673,138 @@ function ChatPage() {
                 <Gamepad2 className="h-3.5 w-3.5" /> Earn credits
               </button>
             )}
-            {authed ? (
+            {authed && (
               <button onClick={() => setProfileOpen(true)}
                 className="rounded-full ring-2 ring-white/10 hover:ring-white/30 transition"
                 title="Profile">
                 <UserAvatar size={34} />
               </button>
-            ) : (
-              <Link to="/auth" search={{ next: "/chat" }}
-                className="rounded-full px-4 py-1.5 text-xs font-semibold text-white neon-glow"
-                style={{ background: "var(--gradient-neon)" }}>
-                Sign in
-              </Link>
             )}
           </div>
 
         </div>
       </header>
 
-      <div className="flex-1 grid md:grid-cols-[280px_1fr] gap-3 p-3 sm:p-4 min-h-0">
+      <div className={`flex-1 grid gap-3 p-3 sm:p-4 min-h-0 relative ${panelOpen ? "md:grid-cols-[280px_1fr] xl:grid-cols-[280px_1fr_300px]" : "md:grid-cols-[280px_1fr]"}`}>
         {/* Sidebar */}
-        <aside className={`glass rounded-2xl p-3 flex flex-col ${sidebar ? 'block' : 'hidden'} md:flex`}>
-          <button onClick={() => newChat(mode)}
+        {sidebar && <div className="md:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-sm" onClick={() => setSidebar(false)} />}
+        <aside className={`glass rounded-2xl p-3 flex-col min-h-0 ${sidebar ? "flex fixed z-40 left-3 top-20 bottom-3 w-[85vw] max-w-[300px]" : "hidden"} md:flex md:static md:w-auto`}>
+          <button onClick={() => { newChat(mode); setSidebar(false); }}
             className="w-full rounded-xl py-2.5 text-sm font-semibold text-white flex items-center gap-2 justify-center neon-glow"
             style={{ background: 'var(--gradient-neon)' }}>
-            <Plus className="h-4 w-4" /> New chat
+            <Plus className="h-4 w-4" /> New chat{activeProject ? ` in ${activeProject.name}` : ""}
           </button>
-          <div className="mt-3 space-y-1 scrollbar-thin overflow-auto flex-1">
-            {threads.length === 0 && (
-              <div className="text-xs text-muted-foreground px-2 py-3 text-center">No chats yet. Say hi 💜</div>
-            )}
-            {threads.map((t) => (
-              <div key={t.id} className={`group flex items-center gap-1 rounded-lg ${t.id === activeId ? 'bg-white/10' : 'hover:bg-white/5'}`}>
-                <button onClick={() => openThread(t.id)} className="flex-1 text-left px-3 py-2 text-sm truncate">
-                  {t.title}
-                </button>
-                <button onClick={() => removeThread(t.id)} className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-white">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+
+          <div className="mt-3 overflow-auto scrollbar-thin flex-1 min-h-0 space-y-4">
+            <div>
+              <div className="flex items-center justify-between px-2 mb-1">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Projects</span>
+                <button onClick={() => setProjectDialog({ open: true, editing: null })} aria-label="New project"
+                  className="h-6 w-6 grid place-items-center rounded-md hover:bg-white/10 text-muted-foreground hover:text-foreground"><Plus className="h-3.5 w-3.5" /></button>
               </div>
-            ))}
+              {projects.length === 0 && (
+                <button onClick={() => setProjectDialog({ open: true, editing: null })}
+                  className="w-full text-left text-xs text-muted-foreground px-3 py-2 rounded-lg border border-dashed border-white/10 hover:bg-white/5">
+                  + Create your first project
+                </button>
+              )}
+              {projects.map((p) => {
+                const isActive = p.id === activeProjectId;
+                const count = threads.filter((t) => t.project_id === p.id).length;
+                return (
+                  <div key={p.id}>
+                    <div className={`group flex items-center gap-1 rounded-lg ${isActive ? "bg-primary/15 border border-primary/30" : "hover:bg-white/5 border border-transparent"}`}>
+                      <button onClick={() => openProject(isActive ? null : p.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left px-2.5 py-2 text-sm">
+                        <span className="text-base leading-none">{p.icon}</span>
+                        <span className="truncate flex-1">{p.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{count}</span>
+                      </button>
+                      <button onClick={() => setProjectDialog({ open: true, editing: p })} aria-label={`Rename ${p.name}`} className="opacity-0 group-hover:opacity-100 p-1.5 text-muted-foreground hover:text-foreground"><Pencil className="h-3 w-3" /></button>
+                      <button onClick={() => setConfirmDelete(p)} aria-label={`Delete ${p.name}`} className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 text-muted-foreground hover:text-foreground"><Trash2 className="h-3 w-3" /></button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div>
+              <div className="px-2 mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                {activeProject ? `${activeProject.name} · chats` : "Recent"}
+              </div>
+              {visibleThreads.length === 0 && (
+                <div className="text-xs text-muted-foreground px-2 py-3 text-center">No chats yet. Say hi 💜</div>
+              )}
+              {visibleThreads.map((t) => {
+                const proj = !activeProject && t.project_id ? projects.find((p) => p.id === t.project_id) : null;
+                return (
+                  <div key={t.id} className={`group flex items-center gap-1 rounded-lg ${t.id === activeId ? 'bg-white/10' : 'hover:bg-white/5'}`}>
+                    <button onClick={() => { openThread(t.id); setSidebar(false); }} className="flex-1 min-w-0 flex items-center gap-2 text-left px-3 py-2 text-sm">
+                      {proj && <span className="text-xs" title={proj.name}>{proj.icon}</span>}
+                      <span className="truncate">{t.title}</span>
+                    </button>
+                    <button onClick={() => removeThread(t.id)} aria-label="Delete chat" className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-foreground">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          {authed ? (
-            <>
-              <Link to="/build" className="mt-3 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10 border border-emerald-500/30 text-emerald-300">
+
+          <div className="mt-3 space-y-2">
+            <button onClick={() => setPluginsOpen(true)} className="w-full glass rounded-xl py-2 px-3 text-xs font-semibold flex items-center gap-2 hover:bg-white/10">
+              <Puzzle className="h-3.5 w-3.5" /> Plugins
+              <span className="ml-auto text-[10px] text-muted-foreground">{plugins.enabled.length} active</span>
+            </button>
+            {authed && (
+              <Link to="/build" className="w-full glass rounded-xl py-2 px-3 text-xs font-semibold flex items-center gap-2 hover:bg-white/10 border border-emerald-500/30 text-emerald-300">
                 <Code2 className="h-3.5 w-3.5" /> Build Mode
               </Link>
-              <button onClick={signOut} className="mt-2 w-full glass rounded-xl py-2 text-xs font-semibold flex items-center justify-center gap-2 hover:bg-white/10">
-                <LogOut className="h-3.5 w-3.5" /> Sign out
-              </button>
-            </>
-          ) : (
-            <Link to="/auth" search={{ next: "/chat" }}
-              className="mt-3 w-full rounded-xl py-2 text-xs font-semibold text-white flex items-center justify-center gap-2 neon-glow"
-              style={{ background: "var(--gradient-neon)" }}>
-              Sign in to save chats
-            </Link>
-          )}
-          <div className="mt-3 pt-3 border-t border-white/10 text-[10px] text-muted-foreground text-center">
-            Crafted with 💜 by <span className="gradient-text font-semibold">Srikar</span>
+            )}
+            {authed && (
+              <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+                <button onClick={() => setProfileOpen(true)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+                  <UserAvatar size={28} />
+                  <span className="text-xs truncate">{profile?.username ?? "You"}</span>
+                </button>
+                <button onClick={signOut} aria-label="Sign out" className="h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10"><LogOut className="h-3.5 w-3.5" /></button>
+              </div>
+            )}
           </div>
         </aside>
 
-
         {/* Conversation */}
         <section className="glass rounded-2xl flex flex-col min-h-0 gradient-border">
+          <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/10 min-h-[48px]">
+            <div className="min-w-0 flex-1 flex items-center gap-2 text-sm">
+              {activeProject ? (
+                <>
+                  <span>{activeProject.icon}</span>
+                  <span className="font-semibold truncate">{activeProject.name}</span>
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                </>
+              ) : null}
+              <span className="truncate text-muted-foreground">{activeThread?.title ?? "New chat"}</span>
+            </div>
+            <button onClick={() => setPluginsOpen(true)} className="hidden sm:flex items-center gap-1 rounded-full border border-white/10 px-2 py-1 hover:bg-white/5" title="Active plugins">
+              {activePlugins.slice(0, 4).map((p) => <span key={p.id} className="text-xs" title={p.name}>{p.icon}</span>)}
+              {activePlugins.length === 0 && <Puzzle className="h-3.5 w-3.5 text-muted-foreground" />}
+              {activePlugins.length > 4 && <span className="text-[10px] text-muted-foreground">+{activePlugins.length - 4}</span>}
+            </button>
+            <button onClick={() => setPanelOpen((v) => !v)} aria-label="Toggle project panel" title="Project info"
+              className={`h-8 w-8 grid place-items-center rounded-lg hover:bg-white/10 ${panelOpen ? "text-foreground" : "text-muted-foreground"}`}>
+              <PanelRight className="h-4 w-4" />
+            </button>
+          </div>
           {!started && (
             <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6 text-center">
-              <div className="h-16 w-16 rounded-3xl overflow-hidden neon-glow" style={{ background: "var(--gradient-neon)" }}>
-                <img src={logoAsset.url} alt="OrbitIntelligenceAI" className="h-full w-full object-cover" />
+              <div className="h-16 w-16 rounded-3xl overflow-hidden neon-glow grid place-items-center text-3xl" style={{ background: "var(--gradient-neon)" }}>
+                {activeProject ? activeProject.icon : <img src={logoAsset.url} alt="OrbitIntelligenceAI" className="h-full w-full object-cover" />}
               </div>
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold gradient-text">{WELCOME[mode]}</h1>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {ORBIT_MODELS.find((m) => m.id === orbitModel)?.label} · Effort: {EFFORTS.find((e) => e.id === effort)?.label}
+                <h1 className="text-2xl sm:text-3xl font-bold gradient-text">{activeProject ? activeProject.name : WELCOME[mode]}</h1>
+                <p className="mt-2 text-xs text-muted-foreground max-w-md mx-auto">
+                  {activeProject?.description || `${ORBIT_MODELS.find((m) => m.id === orbitModel)?.label} · Effort: ${EFFORTS.find((e) => e.id === effort)?.label}`}
                 </p>
               </div>
               <div className="w-full max-w-2xl">{composer}</div>
@@ -714,6 +825,13 @@ function ChatPage() {
                   <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                     m.role === 'user' ? 'rounded-tr-sm text-white' : 'glass rounded-tl-sm'
                   }`} style={m.role === 'user' ? { background: 'var(--gradient-neon)' } : undefined}>
+                    {m.plugins && m.plugins.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-1.5">
+                        {m.plugins.map((p) => (
+                          <span key={p} className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/15 border border-primary/25 text-muted-foreground">{p}</span>
+                        ))}
+                      </div>
+                    )}
                     {m.image && (
                       <img
                         src={m.image}
@@ -726,7 +844,12 @@ function ChatPage() {
                         <div className="prose prose-invert prose-sm max-w-none prose-p:my-2 prose-pre:my-2 prose-pre:bg-black/40 prose-code:text-white">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
                         </div>
-                      ) : m.image ? null : (
+                      ) : m.image ? null : m.activity ? (
+                        <div className="flex items-center gap-2 py-1 text-xs text-muted-foreground">
+                          <span className="h-3 w-3 rounded-full border-2 border-primary/70 border-t-transparent animate-spin" />
+                          {m.activity}
+                        </div>
+                      ) : (
                         <div className="flex items-center gap-1.5 py-1">
                           <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" />
                           <span className="h-2 w-2 rounded-full bg-white/70 typing-dot" style={{ animationDelay: '0.15s' }} />
@@ -748,7 +871,100 @@ function ChatPage() {
           )}
         </section>
 
+        {/* Right panel */}
+        {panelOpen && (
+          <>
+            <div className="xl:hidden fixed inset-0 z-30 bg-background/60 backdrop-blur-sm" onClick={() => setPanelOpen(false)} />
+            <aside className="glass rounded-2xl p-4 flex flex-col gap-4 min-h-0 overflow-auto scrollbar-thin fixed xl:static z-40 right-3 top-20 bottom-3 w-[85vw] max-w-[320px] xl:w-auto xl:max-w-none">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Context</span>
+                <button onClick={() => setPanelOpen(false)} aria-label="Close panel" className="h-7 w-7 grid place-items-center rounded-lg hover:bg-white/10"><X className="h-3.5 w-3.5" /></button>
+              </div>
+              {activeProject ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-11 w-11 rounded-xl grid place-items-center text-2xl bg-white/5 border border-white/10">{activeProject.icon}</div>
+                    <div className="min-w-0">
+                      <div className="font-semibold truncate">{activeProject.name}</div>
+                      <div className="text-[11px] text-muted-foreground">{threads.filter((t) => t.project_id === activeProject.id).length} chats</div>
+                    </div>
+                  </div>
+                  {activeProject.description && <p className="text-xs text-muted-foreground">{activeProject.description}</p>}
+                  <div>
+                    <div className="text-[11px] font-semibold mb-1">Project context</div>
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap rounded-xl border border-white/10 p-3 bg-white/[0.02]">
+                      {activeProject.context || "No context yet. Add goals or background so Orbit tailors every answer."}
+                    </p>
+                  </div>
+                  <button onClick={() => setProjectDialog({ open: true, editing: activeProject })} className="w-full rounded-xl border border-white/15 py-2 text-xs font-semibold hover:bg-white/5 flex items-center justify-center gap-2">
+                    <Pencil className="h-3 w-3" /> Edit project
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground space-y-3">
+                  <p>You're in a general chat. Open a project to give Orbit lasting context for a topic.</p>
+                  <button onClick={() => setProjectDialog({ open: true, editing: null })} className="w-full rounded-xl border border-white/15 py-2 text-xs font-semibold hover:bg-white/5 text-foreground">
+                    + New project
+                  </button>
+                </div>
+              )}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[11px] font-semibold">Active plugins</span>
+                  <button onClick={() => setPluginsOpen(true)} className="text-[11px] text-muted-foreground hover:text-foreground">Manage</button>
+                </div>
+                <div className="space-y-1">
+                  {activePlugins.length === 0 && <div className="text-xs text-muted-foreground">None enabled.</div>}
+                  {activePlugins.map((p) => (
+                    <div key={p.id} className="flex items-center gap-2 text-xs rounded-lg px-2 py-1.5 bg-white/[0.03]">
+                      <span>{p.icon}</span><span className="flex-1">{p.name}</span>
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </aside>
+          </>
+        )}
       </div>
+
+      <PluginsModal open={pluginsOpen} onClose={() => setPluginsOpen(false)} state={plugins} onChange={setPlugins} />
+      <ProjectDialog
+        open={projectDialog.open}
+        initial={projectDialog.editing}
+        onClose={() => setProjectDialog({ open: false, editing: null })}
+        onSubmit={async (d) => {
+          const fields = { name: d.name, description: d.description || null, icon: d.icon, context: d.context || null };
+          try {
+            if (projectDialog.editing) { await editProject(projectDialog.editing.id, fields); toast.success("Project updated"); }
+            else { const p = await addProject(fields); openProject(p.id); toast.success(`${p.icon} ${p.name} created`); }
+          } catch { toast.error("Couldn't save project."); throw new Error("save failed"); }
+        }}
+      />
+      <AnimatePresence>
+        {confirmDelete && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 grid place-items-center bg-background/70 backdrop-blur-sm p-4" onClick={() => setConfirmDelete(null)}>
+            <motion.div initial={{ scale: 0.96 }} animate={{ scale: 1 }} exit={{ scale: 0.97, opacity: 0 }} onClick={(e) => e.stopPropagation()}
+              role="alertdialog" className="glass gradient-border rounded-3xl p-6 w-full max-w-sm">
+              <h2 className="text-lg font-bold">Delete {confirmDelete.icon} {confirmDelete.name}?</h2>
+              <p className="text-sm text-muted-foreground mt-2">This deletes the project and all of its chats. This can't be undone.</p>
+              <div className="mt-5 flex gap-2">
+                <button onClick={() => setConfirmDelete(null)} className="flex-1 rounded-xl border border-white/15 py-2 text-sm hover:bg-white/5">Cancel</button>
+                <button onClick={async () => {
+                  const p = confirmDelete; setConfirmDelete(null);
+                  try {
+                    await removeProject(p.id);
+                    setThreads((ts) => ts.filter((t) => t.project_id !== p.id));
+                    if (activeProjectId === p.id) { setActiveProjectId(null); newChat(mode); }
+                    toast.success("Project deleted");
+                  } catch { toast.error("Couldn't delete project."); }
+                }} className="flex-1 rounded-xl py-2 text-sm font-semibold bg-destructive text-destructive-foreground">Delete</button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Profile modal */}
       <AnimatePresence>
