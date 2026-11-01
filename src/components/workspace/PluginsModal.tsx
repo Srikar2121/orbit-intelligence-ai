@@ -4,7 +4,7 @@ import { Search, Settings2, X, Check } from "lucide-react";
 import { PLUGINS, type PluginCategory } from "@/lib/plugins";
 import type { PluginState } from "@/lib/workspace-store";
 
-const CATS: ("All" | "Installed" | PluginCategory)[] = ["All", "Installed", "Live data", "Knowledge", "Utilities", "Finance"];
+const CATS: ("All" | "Installed" | PluginCategory)[] = ["All", "Installed", "Live data", "Knowledge", "Utilities", "Finance", "Fun"];
 
 export function PluginsModal({ open, onClose, state, onChange }: {
   open: boolean; onClose: () => void; state: PluginState; onChange: (s: PluginState) => void;

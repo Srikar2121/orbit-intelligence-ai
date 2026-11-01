@@ -2,7 +2,7 @@
 // fetches live data from a free public API, and returns text that is passed
 // to Orbit as fresh context for the reply.
 
-export type PluginCategory = "Live data" | "Knowledge" | "Utilities" | "Finance";
+export type PluginCategory = "Live data" | "Knowledge" | "Utilities" | "Finance" | "Fun";
 
 export type PluginSetting = { key: string; label: string; placeholder: string };
 
@@ -167,6 +167,59 @@ export const PLUGINS: OrbitPlugin[] = [
       const rate = r.rates?.[to];
       if (!rate) return null;
       return `Currency: ${amt} ${from} = ${(amt * rate).toFixed(2)} ${to} (rate ${rate}, updated ${r.time_last_update_utc}).`;
+    },
+  },
+  {
+    id: "news",
+    name: "News",
+    icon: "📰",
+    category: "Live data",
+    description: "Fresh headlines on any topic from across the web.",
+    activity: "Fetching headlines…",
+    detect: (m) => /\b(news|headline|headlines|breaking|top stories|what.?s happening|tech news)\b/i.test(m),
+    run: async (msg) => {
+      const q = msg
+        .replace(/\b(give|show|tell|me|the|a|an|latest|top|recent|breaking|tech|news|headlines?|about|on|for|please|today|whats|happening|stories)\b/gi, " ")
+        .replace(/[?.!,]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      const url =
+        q.length > 2
+          ? `https://hn.algolia.com/api/v1/search?tags=story&hitsPerPage=6&query=${encodeURIComponent(q)}`
+          : "https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage=6";
+      const d = await getJSON(url);
+      const hits = (d.hits ?? []).filter((h: any) => h.title).slice(0, 6);
+      if (!hits.length) return null;
+      return "News — " + hits.map((h: any, i: number) => `${i + 1}. ${h.title}${h.url ? ` (${h.url})` : ""}`).join(" ");
+    },
+  },
+  {
+    id: "jokes",
+    name: "Jokes",
+    icon: "😂",
+    category: "Fun",
+    description: "Clean jokes on demand — one-liners and Q&As.",
+    activity: "Finding a joke…",
+    detect: (m) => /\b(joke|jokes|funny|make me laugh|pun|humor|humour|comedy)\b/i.test(m),
+    run: async () => {
+      const d = await getJSON(
+        "https://v2.jokeapi.dev/joke/Any?safe-mode&type=single,twopart&blacklistFlags=nsfw,religious,political,racist,sexist,explicit",
+      );
+      if (d.error || !d.joke && !d.setup) return null;
+      return d.type === "single" ? `Joke: ${d.joke}` : `Joke: ${d.setup} … ${d.delivery}`;
+    },
+  },
+  {
+    id: "quotes",
+    name: "Quotes",
+    icon: "💬",
+    category: "Fun",
+    description: "Inspiring quotes with their authors.",
+    activity: "Picking a quote…",
+    detect: (m) => /\b(quote|quotes|motivat\w*|inspir\w*|wisdom|sayings?)\b/i.test(m),
+    run: async () => {
+      const d = await getJSON("https://dummyjson.com/quotes/random");
+      return `Quote: "${d.quote}" — ${d.author}`;
     },
   },
 ];
