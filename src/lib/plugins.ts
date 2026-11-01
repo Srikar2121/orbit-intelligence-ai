@@ -2,7 +2,7 @@
 // fetches live data from a free public API, and returns text that is passed
 // to Orbit as fresh context for the reply.
 
-export type PluginCategory = "Live data" | "Knowledge" | "Utilities" | "Finance";
+export type PluginCategory = "Live data" | "Knowledge" | "Utilities" | "Finance" | "Fun";
 
 export type PluginSetting = { key: string; label: string; placeholder: string };
 
