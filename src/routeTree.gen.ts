@@ -22,6 +22,7 @@ import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedBuildIdRouteImport } from './routes/_authenticated/build.$id'
+import { Route as ApiPublicBuildAiRouteImport } from './routes/api/public/build-ai'
 import { Route as ApiPublicChatRouteImport } from './routes/api/public/chat'
 import { Route as ApiPublicImageRouteImport } from './routes/api/public/image'
 
@@ -92,6 +93,11 @@ const AuthenticatedBuildIdRoute = AuthenticatedBuildIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedBuildRoute,
 } as any)
+const ApiPublicBuildAiRoute = ApiPublicBuildAiRouteImport.update({
+  id: '/api/public/build-ai',
+  path: '/api/public/build-ai',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicChatRoute = ApiPublicChatRouteImport.update({
   id: '/api/public/chat',
   path: '/api/public/chat',
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/build/$id': typeof AuthenticatedBuildIdRoute
+  '/api/public/build-ai': typeof ApiPublicBuildAiRoute
   '/api/public/chat': typeof ApiPublicChatRoute
   '/api/public/image': typeof ApiPublicImageRoute
 }
@@ -132,6 +139,7 @@ export interface FileRoutesByTo {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/build/$id': typeof AuthenticatedBuildIdRoute
+  '/api/public/build-ai': typeof ApiPublicBuildAiRoute
   '/api/public/chat': typeof ApiPublicChatRoute
   '/api/public/image': typeof ApiPublicImageRoute
 }
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/build/$id': typeof AuthenticatedBuildIdRoute
+  '/api/public/build-ai': typeof ApiPublicBuildAiRoute
   '/api/public/chat': typeof ApiPublicChatRoute
   '/api/public/image': typeof ApiPublicImageRoute
 }
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/build/$id'
+    | '/api/public/build-ai'
     | '/api/public/chat'
     | '/api/public/image'
   fileRoutesByTo: FileRoutesByTo
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/build/$id'
+    | '/api/public/build-ai'
     | '/api/public/chat'
     | '/api/public/image'
   id:
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/build/$id'
+    | '/api/public/build-ai'
     | '/api/public/chat'
     | '/api/public/image'
   fileRoutesById: FileRoutesById
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiPublicBuildAiRoute: typeof ApiPublicBuildAiRoute
   ApiPublicChatRoute: typeof ApiPublicChatRoute
   ApiPublicImageRoute: typeof ApiPublicImageRoute
 }
@@ -313,6 +326,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBuildIdRouteImport
       parentRoute: typeof AuthenticatedBuildRoute
     }
+    '/api/public/build-ai': {
+      id: '/api/public/build-ai'
+      path: '/api/public/build-ai'
+      fullPath: '/api/public/build-ai'
+      preLoaderRoute: typeof ApiPublicBuildAiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/chat': {
       id: '/api/public/chat'
       path: '/api/public/chat'
@@ -366,6 +386,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiPublicBuildAiRoute: ApiPublicBuildAiRoute,
   ApiPublicChatRoute: ApiPublicChatRoute,
   ApiPublicImageRoute: ApiPublicImageRoute,
 }
