@@ -285,6 +285,7 @@ function Editor() {
   const pageFn = useServerFn(generatePage);
 
   const [name, setName] = useState("");
+  const [authed, setAuthed] = useState(false);
   const [files, setFiles] = useState<FileMap>({});
   const [openTabs, setOpenTabs] = useState<string[]>([]);
   const [activePath, setActivePath] = useState<string>("");
@@ -323,20 +324,29 @@ function Editor() {
   useEffect(() => {
     (async () => {
       try {
-        const [proj, v] = await Promise.all([getFn({ data: { id } }), vercelFn()]);
-        setName(proj.name);
-        const f = (proj.files ?? {}) as FileMap;
-        setFiles(f);
-        setLastDeployUrl(proj.last_deploy_url ?? null);
-        setVercelConnected(v.connected);
-        const first =
-          Object.keys(f).find((p) => p === "src/App.jsx" || p === "src/App.tsx") ??
-          Object.keys(f).find((p) => p.endsWith(".jsx") || p.endsWith(".tsx")) ??
-          Object.keys(f)[0] ??
-          "";
-        if (first) {
-          setActivePath(first);
-          setOpenTabs([first]);
+        const { data: u } = await supabase.auth.getUser();
+        const signedIn = !!u.user;
+        setAuthed(signedIn);
+        if (signedIn) {
+          const [proj, v] = await Promise.all([getFn({ data: { id } }), vercelFn()]);
+          setName(proj.name);
+          const f = (proj.files ?? {}) as FileMap;
+          setFiles(f);
+          setLastDeployUrl(proj.last_deploy_url ?? null);
+          setVercelConnected(v.connected);
+          openFirst(f);
+        } else {
+          const p = localBuilds.get(id);
+          if (!p) {
+            toast.error("Project not found");
+            navigate({ to: "/build" });
+            return;
+          }
+          setName(p.name);
+          const f = (p.files ?? {}) as FileMap;
+          setFiles(f);
+          setLastDeployUrl(p.last_deploy_url ?? null);
+          openFirst(f);
         }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed to load");
@@ -412,7 +422,11 @@ function Editor() {
   const save = async () => {
     setSaving(true);
     try {
-      await updateFn({ data: { id, files } });
+      if (!authed) {
+        localBuilds.saveFiles(id, files);
+      } else {
+        await updateFn({ data: { id, files } });
+      }
       setDirty(new Set());
       toast.success("Saved");
     } catch (e) {
@@ -431,11 +445,24 @@ function Editor() {
     setChatBusy(true);
     try {
       if (dirty.size > 0) {
-        await updateFn({ data: { id, files } });
+        if (!authed) localBuilds.saveFiles(id, files);
+        else await updateFn({ data: { id, files } });
         setDirty(new Set());
       }
-      const result = await chatFn({ data: { projectId: id, messages: nextMsgs } });
-      setFiles(result.files as FileMap);
+      let result: { reply: string; changedFiles: string[]; files: FileMap };
+      if (!authed) {
+        const r = await fetchBuildAI({
+          action: "chat",
+          files,
+          messages: nextMsgs.map((m) => ({ role: m.role, content: m.content })),
+        });
+        result = { reply: r.reply ?? "Done.", changedFiles: r.changedFiles, files: { ...files, ...r.files } };
+        localBuilds.saveFiles(id, result.files);
+      } else {
+        const r = await chatFn({ data: { projectId: id, messages: nextMsgs } });
+        result = { reply: r.reply, changedFiles: r.changedFiles, files: r.files as FileMap };
+      }
+      setFiles(result.files);
       setLastChanged(new Set(result.changedFiles));
       setChatMsgs((m) => [
         ...m,
@@ -462,10 +489,27 @@ function Editor() {
     if (!pageName.trim() || !pageDesc.trim()) return;
     setPageBusy(true);
     try {
-      const result = await pageFn({
-        data: { projectId: id, pageName: pageName.trim(), description: pageDesc.trim() },
-      });
-      setFiles(result.files as FileMap);
+      let result: { files: FileMap; changedFiles: string[]; componentName: string };
+      if (!authed) {
+        const r = await fetchBuildAI({
+          action: "page",
+          files,
+          pageName: pageName.trim(),
+          description: pageDesc.trim(),
+        });
+        result = {
+          files: { ...files, ...r.files },
+          changedFiles: r.changedFiles,
+          componentName: r.componentName ?? pageName.trim(),
+        };
+        localBuilds.saveFiles(id, result.files);
+      } else {
+        const r = await pageFn({
+          data: { projectId: id, pageName: pageName.trim(), description: pageDesc.trim() },
+        });
+        result = { files: r.files as FileMap, changedFiles: r.changedFiles, componentName: r.componentName };
+      }
+      setFiles(result.files);
       setLastChanged(new Set(result.changedFiles));
       if (result.changedFiles[0]) openFile(result.changedFiles[0]);
       toast.success(`Created ${result.componentName}`);
@@ -480,6 +524,10 @@ function Editor() {
   };
 
   const deploy = async () => {
+    if (!authed) {
+      toast.error("Sign in to deploy to Vercel.");
+      return;
+    }
     if (!vercelConnected) {
       toast.error("Connect Vercel first (back to projects page)");
       return;
