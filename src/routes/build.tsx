@@ -70,6 +70,13 @@ function BuildHome() {
   const create = async () => {
     if (!newName.trim()) return;
     try {
+      if (!authed) {
+        const p = localBuilds.create(newName.trim());
+        setNewName("");
+        setCreating(false);
+        navigate({ to: "/build/$id", params: { id: p.id } });
+        return;
+      }
       const row = await createFn({ data: { name: newName.trim() } });
       setNewName("");
       setCreating(false);
@@ -82,7 +89,11 @@ function BuildHome() {
   const remove = async (id: string) => {
     if (!confirm("Delete this project? This cannot be undone.")) return;
     try {
-      await delFn({ data: { id } });
+      if (!authed) {
+        localBuilds.remove(id);
+      } else {
+        await delFn({ data: { id } });
+      }
       setProjects((p) => p.filter((x) => x.id !== id));
       toast.success("Deleted");
     } catch (e) {
