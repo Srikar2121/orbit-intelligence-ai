@@ -13,7 +13,7 @@ import {
   disconnectVercel,
 } from "@/lib/build.functions";
 
-export const Route = createFileRoute("/_authenticated/build")({
+export const Route = createFileRoute("/build")({
   head: () => ({
     meta: [
       { title: "Build Mode · OrbitIntelligenceAI" },

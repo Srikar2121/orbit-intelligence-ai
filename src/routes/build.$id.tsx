@@ -46,7 +46,7 @@ import {
   generatePage,
 } from "@/lib/build.functions";
 
-export const Route = createFileRoute("/_authenticated/build/$id")({
+export const Route = createFileRoute("/build/$id")({
   head: () => ({
     meta: [
       { title: "Editor · Orbit Build" },
