@@ -320,6 +320,18 @@ function Editor() {
   const [pageBusy, setPageBusy] = useState(false);
   const [showDownload, setShowDownload] = useState(false);
 
+  const openFirst = (f: FileMap) => {
+    const first =
+      Object.keys(f).find((p) => p === "src/App.jsx" || p === "src/App.tsx") ??
+      Object.keys(f).find((p) => p.endsWith(".jsx") || p.endsWith(".tsx")) ??
+      Object.keys(f)[0] ??
+      "";
+    if (first) {
+      setActivePath(first);
+      setOpenTabs([first]);
+    }
+  };
+
   /* ---------------- load ---------------- */
   useEffect(() => {
     (async () => {
