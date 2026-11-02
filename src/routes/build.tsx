@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, ArrowLeft, Code2, Rocket, Terminal, ExternalLink, KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { localBuilds } from "@/lib/build-store";
 import {
   listBuildProjects,
   createBuildProject,
