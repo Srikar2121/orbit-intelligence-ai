@@ -155,22 +155,32 @@ function BuildHome() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {vercelConnected ? (
-              <button
-                onClick={disconnect}
-                className="flex items-center gap-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-950"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                vercel://connected
-              </button>
+            {authed ? (
+              vercelConnected ? (
+                <button
+                  onClick={disconnect}
+                  className="flex items-center gap-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-950"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  vercel://connected
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowToken(true)}
+                  className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  connect vercel
+                </button>
+              )
             ) : (
-              <button
-                onClick={() => setShowToken(true)}
-                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700"
+              <Link
+                to="/auth"
+                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200"
               >
                 <KeyRound className="h-3.5 w-3.5" />
-                connect vercel
-              </button>
+                sign in to deploy
+              </Link>
             )}
           </div>
         </div>
