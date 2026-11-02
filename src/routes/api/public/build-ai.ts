@@ -43,7 +43,12 @@ function jsonError(message: string, status: number) {
   });
 }
 
-async function callGateway(system: string, user: { role: "user" | "assistant"; content: string }[]) {
+type GatewayResult = { error: string; status: 429 | 500 } | { parsed: Record<string, unknown> };
+
+async function callGateway(
+  system: string,
+  user: { role: "user" | "assistant"; content: string }[],
+): Promise<GatewayResult> {
   const apiKey = process.env.LOVABLE_API_KEY;
   if (!apiKey) return { error: "AI is not configured", status: 500 as const };
 
