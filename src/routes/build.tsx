@@ -37,6 +37,7 @@ function BuildHome() {
   const disconnectFn = useServerFn(disconnectVercel);
 
   const [projects, setProjects] = useState<Project[]>([]);
+  const [authed, setAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -48,9 +49,16 @@ function BuildHome() {
   useEffect(() => {
     (async () => {
       try {
-        const [p, v] = await Promise.all([listFn(), vercelStatusFn()]);
-        setProjects(p);
-        setVercelConnected(v.connected);
+        const { data: u } = await supabase.auth.getUser();
+        const signedIn = !!u.user;
+        setAuthed(signedIn);
+        if (signedIn) {
+          const [p, v] = await Promise.all([listFn(), vercelStatusFn()]);
+          setProjects(p);
+          setVercelConnected(v.connected);
+        } else {
+          setProjects(localBuilds.list());
+        }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed to load");
       } finally {
