@@ -36,6 +36,8 @@ import {
   SandpackPreview,
   SandpackConsole,
 } from "@codesandbox/sandpack-react";
+import { supabase } from "@/integrations/supabase/client";
+import { localBuilds, fetchBuildAI } from "@/lib/build-store";
 import {
   getBuildProject,
   updateBuildProject,
