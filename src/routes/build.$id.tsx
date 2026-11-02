@@ -13,7 +13,6 @@ import {
   Loader2,
   ExternalLink,
   CheckCircle2,
-  MessageSquare,
   Play,
   Download,
   FilePlus,
@@ -41,7 +40,6 @@ import { localBuilds, fetchBuildAI } from "@/lib/build-store";
 import {
   getBuildProject,
   updateBuildProject,
-  generateCode,
   deployToVercel,
   getVercelStatus,
   chatBuild,

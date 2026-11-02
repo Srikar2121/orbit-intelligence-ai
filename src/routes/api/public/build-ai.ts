@@ -104,7 +104,7 @@ If you only want to chat (no file changes), still respond with the same JSON sha
 ${RULES}
 
 Current project files:
-${fileList(body.files)}`;
+${fileList(body.files ?? {})}`;
 
             const r = await callGateway(system, body.messages.slice(-12));
             if ("error" in r) return jsonError(r.error, r.status);
@@ -121,7 +121,7 @@ ${RULES}
 - Existing deps: react, react-dom, vite, @vitejs/plugin-react.
 
 Current project files:
-${fileList(body.files)}`;
+${fileList(body.files ?? {})}`;
 
             const r = await callGateway(system, [{ role: "user", content: body.prompt }]);
             if ("error" in r) return jsonError(r.error, r.status);
@@ -136,7 +136,7 @@ ${fileList(body.files)}`;
           const system = `You generate a single React page component for a Vite + React project. Output JSON only: {"files":{"src/pages/${componentName}.jsx":"..."}}.
 The component must be a default export named ${componentName}. Use inline styles or simple CSS. No imports beyond react.
 Existing files:
-${fileList(body.files)}`;
+${fileList(body.files ?? {})}`;
 
           const r = await callGateway(system, [
             { role: "user", content: `Page name: ${componentName}\nDescription: ${body.description}` },
