@@ -43,7 +43,7 @@ function jsonError(message: string, status: number) {
   });
 }
 
-type GatewayResult = { error: string; status: 429 | 500 } | { parsed: Record<string, unknown> };
+type GatewayResult = { error: string; status: 402 | 429 | 500 } | { parsed: Record<string, unknown> };
 
 async function callGateway(
   system: string,
