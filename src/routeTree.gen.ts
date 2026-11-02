@@ -12,16 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BuildRouteImport } from './routes/build'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as DussehraRouteImport } from './routes/dussehra'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
-import { Route as AuthenticatedBuildRouteImport } from './routes/_authenticated/build'
 import { Route as AuthenticatedPortalRouteImport } from './routes/_authenticated/portal'
+import { Route as BuildIdRouteImport } from './routes/build.$id'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
-import { Route as AuthenticatedBuildIdRouteImport } from './routes/_authenticated/build.$id'
 import { Route as ApiPublicBuildAiRouteImport } from './routes/api/public/build-ai'
 import { Route as ApiPublicChatRouteImport } from './routes/api/public/chat'
 import { Route as ApiPublicImageRouteImport } from './routes/api/public/image'
@@ -38,6 +38,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BuildRoute = BuildRouteImport.update({
+  id: '/build',
+  path: '/build',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChatRoute = ChatRouteImport.update({
@@ -67,15 +72,15 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedBuildRoute = AuthenticatedBuildRouteImport.update({
-  id: '/build',
-  path: '/build',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedPortalRoute = AuthenticatedPortalRouteImport.update({
   id: '/portal',
   path: '/portal',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const BuildIdRoute = BuildIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => BuildRoute,
 } as any)
 const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   id: '/.lovable/oauth/consent',
@@ -88,11 +93,6 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
-const AuthenticatedBuildIdRoute = AuthenticatedBuildIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AuthenticatedBuildRoute,
-} as any)
 const ApiPublicBuildAiRoute = ApiPublicBuildAiRouteImport.update({
   id: '/api/public/build-ai',
   path: '/api/public/build-ai',
@@ -112,16 +112,16 @@ const ApiPublicImageRoute = ApiPublicImageRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/build': typeof BuildRouteWithChildren
   '/chat': typeof ChatRoute
   '/dussehra': typeof DussehraRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/build': typeof AuthenticatedBuildRouteWithChildren
   '/portal': typeof AuthenticatedPortalRoute
+  '/build/$id': typeof BuildIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/build/$id': typeof AuthenticatedBuildIdRoute
   '/api/public/build-ai': typeof ApiPublicBuildAiRoute
   '/api/public/chat': typeof ApiPublicChatRoute
   '/api/public/image': typeof ApiPublicImageRoute
@@ -129,16 +129,16 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/build': typeof BuildRouteWithChildren
   '/chat': typeof ChatRoute
   '/dussehra': typeof DussehraRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/build': typeof AuthenticatedBuildRouteWithChildren
   '/portal': typeof AuthenticatedPortalRoute
+  '/build/$id': typeof BuildIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/build/$id': typeof AuthenticatedBuildIdRoute
   '/api/public/build-ai': typeof ApiPublicBuildAiRoute
   '/api/public/chat': typeof ApiPublicChatRoute
   '/api/public/image': typeof ApiPublicImageRoute
@@ -148,16 +148,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/build': typeof BuildRouteWithChildren
   '/chat': typeof ChatRoute
   '/dussehra': typeof DussehraRoute
   '/mcp': typeof McpRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  '/_authenticated/build': typeof AuthenticatedBuildRouteWithChildren
   '/_authenticated/portal': typeof AuthenticatedPortalRoute
+  '/build/$id': typeof BuildIdRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/_authenticated/build/$id': typeof AuthenticatedBuildIdRoute
   '/api/public/build-ai': typeof ApiPublicBuildAiRoute
   '/api/public/chat': typeof ApiPublicChatRoute
   '/api/public/image': typeof ApiPublicImageRoute
@@ -167,16 +167,16 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/build'
     | '/chat'
     | '/dussehra'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/build'
     | '/portal'
+    | '/build/$id'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
-    | '/build/$id'
     | '/api/public/build-ai'
     | '/api/public/chat'
     | '/api/public/image'
@@ -184,16 +184,16 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/build'
     | '/chat'
     | '/dussehra'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/build'
     | '/portal'
+    | '/build/$id'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
-    | '/build/$id'
     | '/api/public/build-ai'
     | '/api/public/chat'
     | '/api/public/image'
@@ -202,16 +202,16 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/build'
     | '/chat'
     | '/dussehra'
     | '/mcp'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
-    | '/_authenticated/build'
     | '/_authenticated/portal'
+    | '/build/$id'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
-    | '/_authenticated/build/$id'
     | '/api/public/build-ai'
     | '/api/public/chat'
     | '/api/public/image'
@@ -221,6 +221,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  BuildRoute: typeof BuildRouteWithChildren
   ChatRoute: typeof ChatRoute
   DussehraRoute: typeof DussehraRoute
   McpRoute: typeof McpRoute
@@ -254,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/build': {
+      id: '/build'
+      path: '/build'
+      fullPath: '/build'
+      preLoaderRoute: typeof BuildRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chat': {
@@ -291,19 +299,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/build': {
-      id: '/_authenticated/build'
-      path: '/build'
-      fullPath: '/build'
-      preLoaderRoute: typeof AuthenticatedBuildRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/portal': {
       id: '/_authenticated/portal'
       path: '/portal'
       fullPath: '/portal'
       preLoaderRoute: typeof AuthenticatedPortalRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/build/$id': {
+      id: '/build/$id'
+      path: '/$id'
+      fullPath: '/build/$id'
+      preLoaderRoute: typeof BuildIdRouteImport
+      parentRoute: typeof BuildRoute
     }
     '/.lovable/oauth/consent': {
       id: '/.lovable/oauth/consent'
@@ -318,13 +326,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/.mcp/invoke-tool/$tool'
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/build/$id': {
-      id: '/_authenticated/build/$id'
-      path: '/$id'
-      fullPath: '/build/$id'
-      preLoaderRoute: typeof AuthenticatedBuildIdRouteImport
-      parentRoute: typeof AuthenticatedBuildRoute
     }
     '/api/public/build-ai': {
       id: '/api/public/build-ai'
@@ -350,34 +351,32 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedBuildRouteChildren {
-  AuthenticatedBuildIdRoute: typeof AuthenticatedBuildIdRoute
-}
-
-const AuthenticatedBuildRouteChildren: AuthenticatedBuildRouteChildren = {
-  AuthenticatedBuildIdRoute: AuthenticatedBuildIdRoute,
-}
-
-const AuthenticatedBuildRouteWithChildren =
-  AuthenticatedBuildRoute._addFileChildren(AuthenticatedBuildRouteChildren)
-
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedBuildRoute: typeof AuthenticatedBuildRouteWithChildren
   AuthenticatedPortalRoute: typeof AuthenticatedPortalRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedBuildRoute: AuthenticatedBuildRouteWithChildren,
   AuthenticatedPortalRoute: AuthenticatedPortalRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface BuildRouteChildren {
+  BuildIdRoute: typeof BuildIdRoute
+}
+
+const BuildRouteChildren: BuildRouteChildren = {
+  BuildIdRoute: BuildIdRoute,
+}
+
+const BuildRouteWithChildren = BuildRoute._addFileChildren(BuildRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  BuildRoute: BuildRouteWithChildren,
   ChatRoute: ChatRoute,
   DussehraRoute: DussehraRoute,
   McpRoute: McpRoute,

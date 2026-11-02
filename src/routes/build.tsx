@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Trash2, ArrowLeft, Code2, Rocket, Terminal, ExternalLink, KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { localBuilds } from "@/lib/build-store";
 import {
   listBuildProjects,
   createBuildProject,
@@ -13,7 +15,7 @@ import {
   disconnectVercel,
 } from "@/lib/build.functions";
 
-export const Route = createFileRoute("/_authenticated/build")({
+export const Route = createFileRoute("/build")({
   head: () => ({
     meta: [
       { title: "Build Mode · OrbitIntelligenceAI" },
@@ -35,6 +37,7 @@ function BuildHome() {
   const disconnectFn = useServerFn(disconnectVercel);
 
   const [projects, setProjects] = useState<Project[]>([]);
+  const [authed, setAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -46,9 +49,16 @@ function BuildHome() {
   useEffect(() => {
     (async () => {
       try {
-        const [p, v] = await Promise.all([listFn(), vercelStatusFn()]);
-        setProjects(p);
-        setVercelConnected(v.connected);
+        const { data: u } = await supabase.auth.getUser();
+        const signedIn = !!u.user;
+        setAuthed(signedIn);
+        if (signedIn) {
+          const [p, v] = await Promise.all([listFn(), vercelStatusFn()]);
+          setProjects(p);
+          setVercelConnected(v.connected);
+        } else {
+          setProjects(localBuilds.list());
+        }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -60,6 +70,13 @@ function BuildHome() {
   const create = async () => {
     if (!newName.trim()) return;
     try {
+      if (!authed) {
+        const p = localBuilds.create(newName.trim());
+        setNewName("");
+        setCreating(false);
+        navigate({ to: "/build/$id", params: { id: p.id } });
+        return;
+      }
       const row = await createFn({ data: { name: newName.trim() } });
       setNewName("");
       setCreating(false);
@@ -72,7 +89,11 @@ function BuildHome() {
   const remove = async (id: string) => {
     if (!confirm("Delete this project? This cannot be undone.")) return;
     try {
-      await delFn({ data: { id } });
+      if (!authed) {
+        localBuilds.remove(id);
+      } else {
+        await delFn({ data: { id } });
+      }
       setProjects((p) => p.filter((x) => x.id !== id));
       toast.success("Deleted");
     } catch (e) {
@@ -134,22 +155,32 @@ function BuildHome() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {vercelConnected ? (
-              <button
-                onClick={disconnect}
-                className="flex items-center gap-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-950"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                vercel://connected
-              </button>
+            {authed ? (
+              vercelConnected ? (
+                <button
+                  onClick={disconnect}
+                  className="flex items-center gap-2 rounded-md border border-emerald-900/60 bg-emerald-950/40 px-3 py-1.5 text-xs text-emerald-300 transition hover:bg-emerald-950"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  vercel://connected
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowToken(true)}
+                  className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  connect vercel
+                </button>
+              )
             ) : (
-              <button
-                onClick={() => setShowToken(true)}
-                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-300 transition hover:border-zinc-700"
+              <Link
+                to="/auth"
+                className="flex items-center gap-2 rounded-md border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-xs text-zinc-400 transition hover:border-zinc-700 hover:text-zinc-200"
               >
                 <KeyRound className="h-3.5 w-3.5" />
-                connect vercel
-              </button>
+                sign in to deploy
+              </Link>
             )}
           </div>
         </div>
